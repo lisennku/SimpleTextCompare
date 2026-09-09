@@ -36,13 +36,16 @@ const NO_WIDTH: usize = 5;
 /// 将文本按照显示宽度进行计算折叠
 /// - `text` 输入文本
 /// - `width` 指定的宽度
-pub fn wrap_code_width(text: &str, width: usize) -> Vec<String> {
+pub fn wrap_code_width(text: Option<&str>, width: usize) -> Vec<String> {
     // assert!(width > 40, "宽度至少为40，现在是{width}");
 
-    // 如果输入文本为空，直接返回一个vector，包空字符串
+    // 参数文本修改为Option，Some(text)表示真实文档内容，None表示这一侧没有对应文本
+    let Some(text) = text else {
+        return Vec::new();
+    };
+
     if text.is_empty() {
-        // return vec![String::new()];
-        return Vec::new(); // 此处返回值不再包括String::new()，因为会导致显示时出现不必要的空行
+        return vec![String::new()];
     }
 
     let mut lines: Vec<String> = Vec::new(); // 存储多个字符串，每个字符串的显示宽度均小于指定的width
@@ -114,9 +117,9 @@ pub fn padding_white_space(text: &str, width: usize, left_align: bool) -> String
 
 pub fn output_wrapped_row(
     left_no: Option<usize>,
-    left_line: &str,
+    left_line: Option<&str>,
     right_no: Option<usize>,
-    right_line: &str,
+    right_line: Option<&str>,
     line_status: &str,
     code_width: usize,
     no_width: usize,
@@ -199,28 +202,28 @@ mod tests {
     #[test]
     fn blank_line_to_wrap() {
         let text = String::from("");
-        let v = wrap_code_width(&text, 4);
+        let v = wrap_code_width(Some(&text), 4);
         assert_ne!(v, vec![String::new()]);
         println!("{:#?}", v);
     }
     #[test]
     fn no_need_to_wrap() {
         let text = String::from("Hello, world!");
-        let v = wrap_code_width(&text, 4);
+        let v = wrap_code_width(Some(&text), 4);
         println!("{:#?}", v);
     }
 
     #[test]
     fn newline_wrap() {
         let text = String::from("Hello\nworld!");
-        let v = wrap_code_width(&text, 4);
+        let v = wrap_code_width(Some(&text), 4);
         println!("{:#?}", v);
     }
 
     #[test]
     fn special_chars() {
         let text = String::from("y̆éñäôüçi̊");
-        let v = wrap_code_width(&text, 4);
+        let v = wrap_code_width(Some(&text), 4);
         for line in &v {
             println!("{}", line);
         }
@@ -231,9 +234,9 @@ mod tests {
         output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
         output_wrapped_row(
             None,
-            "",
+            None,
             Some(1),
-            "a".repeat(16).as_str(),
+            Some("a".repeat(16).as_str()),
             "Delete",
             CODE_WIDTH,
             NO_WIDTH,
@@ -245,9 +248,9 @@ mod tests {
         output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
         output_wrapped_row(
             Some(1),
-            "a".repeat(16).as_str(),
+            Some("a".repeat(16).as_str()),
             None,
-            "",
+            None,
             "Insert",
             CODE_WIDTH,
             NO_WIDTH,

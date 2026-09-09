@@ -38,9 +38,9 @@ pub fn compare_files_table_style(left: &PathBuf, right: &PathBuf) -> Result<()> 
             ChangeTag::Equal => {
                 output::output_wrapped_row(
                     Some(left_no),
-                    line,
+                    Some(line),
                     Some(right_no),
-                    line,
+                    Some(line),
                     LineStatus::Equal.to_str(),
                     code_width,
                     no_width,
@@ -51,9 +51,9 @@ pub fn compare_files_table_style(left: &PathBuf, right: &PathBuf) -> Result<()> 
             ChangeTag::Delete => {
                 output::output_wrapped_row(
                     Some(left_no),
-                    line,
+                    Some(line),
                     None,
-                    "",
+                    None,
                     LineStatus::Delete.to_str(),
                     code_width,
                     no_width,
@@ -63,9 +63,9 @@ pub fn compare_files_table_style(left: &PathBuf, right: &PathBuf) -> Result<()> 
             ChangeTag::Insert => {
                 output::output_wrapped_row(
                     None,
-                    "",
+                    None,
                     Some(right_no),
-                    line,
+                    Some(line),
                     LineStatus::Insert.to_str(),
                     code_width,
                     no_width,
