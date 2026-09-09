@@ -11,5 +11,5 @@ pub struct Cli {
     pub left_file: PathBuf,
     pub right_file: PathBuf,
     #[arg(short, long)]
-    pub path: Option<String>,
+    pub path: Option<PathBuf>,
 }

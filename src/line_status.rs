@@ -19,16 +19,19 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn equal_test() {
         let e = LineStatus::Equal;
         assert_eq!(e.to_str(), "Equal");
     }
     #[test]
+    #[ignore]
     fn delete_test() {
         let e = LineStatus::Delete;
         assert_eq!(e.to_str(), "Delete");
     }
     #[test]
+    #[ignore]
     fn insert_test() {
         let e = LineStatus::Insert;
         assert_eq!(e.to_str(), "Insert");

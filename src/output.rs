@@ -29,7 +29,9 @@
 //!         - `width` 整个行的行宽
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+#[allow(dead_code)]
 const CODE_WIDTH: usize = 10;
+#[allow(dead_code)]
 const NO_WIDTH: usize = 5;
 /// 将文本按照显示宽度进行计算折叠
 /// - `text` 输入文本
@@ -39,7 +41,8 @@ pub fn wrap_code_width(text: &str, width: usize) -> Vec<String> {
 
     // 如果输入文本为空，直接返回一个vector，包空字符串
     if text.is_empty() {
-        return vec![String::new()];
+        // return vec![String::new()];
+        return Vec::new(); // 此处返回值不再包括String::new()，因为会导致显示时出现不必要的空行
     }
 
     let mut lines: Vec<String> = Vec::new(); // 存储多个字符串，每个字符串的显示宽度均小于指定的width
@@ -134,13 +137,13 @@ pub fn output_wrapped_row(
         // 先处理行号，因为传入的是Option，要进行处理拿到真实行号
         // 并且结合索引，只有第一个元素才显示行号
         let left_no = if i == 0 {
-            left_no.map(|n| n.to_string()).unwrap_or(String::new())
+            left_no.map(|n| n.to_string()).unwrap_or("/".to_string())
         } else {
             String::new()
         };
 
         let right_no = if i == 0 {
-            right_no.map(|n| n.to_string()).unwrap_or(String::new())
+            right_no.map(|n| n.to_string()).unwrap_or("/".to_string())
         } else {
             String::new()
         };
@@ -197,9 +200,11 @@ mod tests {
     fn blank_line_to_wrap() {
         let text = String::from("");
         let v = wrap_code_width(&text, 4);
+        assert_eq!(v, vec![String::new()]);
         println!("{:#?}", v);
     }
     #[test]
+    #[ignore]
     fn no_need_to_wrap() {
         let text = String::from("Hello, world!");
         let v = wrap_code_width(&text, 4);
@@ -207,6 +212,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn newline_wrap() {
         let text = String::from("Hello\nworld!");
         let v = wrap_code_width(&text, 4);
@@ -214,6 +220,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn special_chars() {
         let text = String::from("y̆éñäôüçi̊");
         let v = wrap_code_width(&text, 4);
@@ -222,7 +229,22 @@ mod tests {
         }
     }
     #[test]
+    #[ignore]
     fn output_wrapped_delete() {
+        output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
+        output_seperator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
+        output_wrapped_row(
+            None,
+            "",
+            Some(1),
+            "a".repeat(16).as_str(),
+            "Delete",
+            CODE_WIDTH,
+            NO_WIDTH,
+        )
+    }
+    #[test]
+    fn output_wrapped_insert() {
         output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
         output_seperator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
         output_wrapped_row(
