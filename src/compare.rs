@@ -76,7 +76,6 @@ pub fn compare_files_table_style(left: &PathBuf, right: &PathBuf) -> Result<()> 
 mod tests {
     use super::*;
     #[test]
-    #[ignore]
     fn test_compare_files_table_style() {
         let p1 = PathBuf::from(
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\base.txt",
