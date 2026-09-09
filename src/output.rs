@@ -162,6 +162,9 @@ pub fn output_wrapped_row(
     }
 }
 
+/// 负责输出对比终端的抬头
+/// - `left_file`  左文件
+/// - `right_file` 右文件
 pub fn output_wrapped_header(
     left_file: &str,
     right_file: &str,
@@ -182,6 +185,10 @@ pub fn output_wrapped_header(
     )
 }
 
+/// 负责输出分割线
+pub fn output_seperator_row(width: usize) {
+    println!("{}", "-".repeat(width));
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -217,6 +224,7 @@ mod tests {
     #[test]
     fn output_wrapped_delete() {
         output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
+        output_seperator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
         output_wrapped_row(
             Some(1),
             "a".repeat(16).as_str(),
