@@ -6,7 +6,7 @@
 //! 1. `output_wrapped_row(
 //! left_no: Option<usize>, left_line: &str,
 //! right_no: Option<usize>, right_line: &str,
-//! line_status: &str, code_width: usize
+//! line_status: &str, code_width: usize, no_width: usize
 //! )`
 //!     - 负责输出行内容
 //!     - 参数说明
@@ -16,6 +16,7 @@
 //!         - `right_line` 右文件行文本，对于`ChangeTag::Delete`来说，该参数为""
 //!         - `line_status` 该行状态，相同、插入、删除
 //!         - `code_width` 代码列的宽度，如果一行文本的长度(指的是终端显示长度)超过该值会进行换行
+//!         - `no_width` 行号宽度
 //! 2. `output_wrapped_header(left_file: &str, right_file: &str, width)`
 //!     - 负责输出header
 //!     - 参数说明
@@ -115,6 +116,7 @@ pub fn output_wrapped_row(
     right_line: &str,
     line_status: &str,
     code_width: usize,
+    no_width: usize,
 ) {
     // left_lines和right_lines此时为Vec<String>容器
     // 可能有一个元素，表示代码行没超过列宽
@@ -151,9 +153,9 @@ pub fn output_wrapped_row(
 
         println!(
             "{} | {} | {} | {} | {}",
-            padding_white_space(&left_no, NO_WIDTH, true),
+            padding_white_space(&left_no, no_width, true),
             padding_white_space(left_code, code_width, true),
-            padding_white_space(&right_no, NO_WIDTH, true),
+            padding_white_space(&right_no, no_width, true),
             padding_white_space(right_code, code_width, true),
             padding_white_space(line_status, code_width, true)
         )
@@ -222,6 +224,7 @@ mod tests {
             "",
             "Insert",
             CODE_WIDTH,
+            NO_WIDTH,
         )
     }
 }
