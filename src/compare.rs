@@ -14,14 +14,20 @@ pub fn compare_files_table_style(left: &PathBuf, right: &PathBuf) -> Result<()> 
         fs::read_to_string(right).with_context(|| format!("打开文件{}出错", right.display()))?;
     let diff = TextDiff::from_lines(&left_text, &right_text);
 
-    let left_file_name = left.file_name().unwrap().to_str().unwrap_or("");
-    let right_file_name = right.file_name().unwrap().to_str().unwrap_or("");
+    let left_file_name = left
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("<left>");
+    let right_file_name = right
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("<right>");
 
     let code_width = 50_usize;
     let no_width = 6_usize;
 
     output::output_wrapped_header(left_file_name, right_file_name, code_width, no_width);
-    output::output_seperator_row(code_width * 3 + no_width * 2 + 3 * 4);
+    output::output_separator_row(code_width * 3 + no_width * 2 + 3 * 4);
 
     let mut left_no = 1_usize;
     let mut right_no = 1_usize;
@@ -76,7 +82,16 @@ pub fn compare_files_table_style(left: &PathBuf, right: &PathBuf) -> Result<()> 
 mod tests {
     use super::*;
     #[test]
-    fn test_compare_files_table_style() {
+    fn test_empty_lines() -> Result<()> {
+        let p1 = PathBuf::from(r"C:\Users\LFJ\Desktop\new.txt");
+        let s = fs::read_to_string(p1)?;
+        for (idx, line) in s.lines().enumerate() {
+            println!("{}:{}+", idx + 1, line);
+        }
+        Ok(())
+    }
+    #[test]
+    fn test_compare_files_table_style() -> Result<()> {
         let p1 = PathBuf::from(
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\base.txt",
         );
@@ -84,6 +99,7 @@ mod tests {
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\comp.txt",
         );
 
-        compare_files_table_style(&p1, &p2).unwrap();
+        compare_files_table_style(&p1, &p2)?;
+        Ok(())
     }
 }

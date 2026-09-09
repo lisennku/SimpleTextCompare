@@ -23,7 +23,7 @@
 //!         - `left_file` 左文件名
 //!         - `right_file` 右文件名
 //!         - `width` 列宽
-//! 3. `output_seperator_row(width: usize)`
+//! 3. `output_separator_row(width: usize)`
 //!     - 负责输出分割行
 //!     - 参数说明
 //!         - `width` 整个行的行宽
@@ -189,7 +189,7 @@ pub fn output_wrapped_header(
 }
 
 /// 负责输出分割线
-pub fn output_seperator_row(width: usize) {
+pub fn output_separator_row(width: usize) {
     println!("{}", "-".repeat(width));
 }
 #[cfg(test)]
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn output_wrapped_delete() {
         output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
-        output_seperator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
+        output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
         output_wrapped_row(
             None,
             "",
@@ -242,7 +242,7 @@ mod tests {
     #[test]
     fn output_wrapped_insert() {
         output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
-        output_seperator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
+        output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
         output_wrapped_row(
             Some(1),
             "a".repeat(16).as_str(),
