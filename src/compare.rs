@@ -1,13 +1,17 @@
-//!
+//! 本模块主要用于进行文本比较
+//! 提供
+//! 1. 按照文本对照形式输出差异
 use crate::line_status::LineStatus;
 use crate::output;
 use anyhow::{Context, Result};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-///
-pub fn compare_files_table_style(left: &PathBuf, right: &PathBuf) -> Result<()> {
+/// 按照给定的文件，以表格形式输出两个文本之间的差异
+/// - `left`  左文件
+/// - `right` 右文件
+pub fn compare_files_table_style(left: &Path, right: &Path) -> Result<()> {
     let left_text =
         fs::read_to_string(left).with_context(|| format!("打开文件{}出错", left.display()))?;
     let right_text =

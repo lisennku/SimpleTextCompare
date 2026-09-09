@@ -2,31 +2,10 @@
 //! 打印概览如下
 //! 左行号 left文件 | 右行号 right文件 | 状态
 //!  ---------------------------------------
-//! 主要入口有三部分
-//! 1. `output_wrapped_row(
-//! left_no: Option<usize>, left_line: &str,
-//! right_no: Option<usize>, right_line: &str,
-//! line_status: &str, code_width: usize, no_width: usize
-//! )`
-//!     - 负责输出行内容
-//!     - 参数说明
-//!         - `left_no` 左文件行号
-//!         - `left_line` 左文件行文本，对于`ChangeTag::Insert`来说，该参数为""
-//!         - `right_no` 右文件行号
-//!         - `right_line` 右文件行文本，对于`ChangeTag::Delete`来说，该参数为""
-//!         - `line_status` 该行状态，相同、插入、删除
-//!         - `code_width` 代码列的宽度，如果一行文本的长度(指的是终端显示长度)超过该值会进行换行
-//!         - `no_width` 行号宽度
-//! 2. `output_wrapped_header(left_file: &str, right_file: &str, width)`
-//!     - 负责输出header
-//!     - 参数说明
-//!         - `left_file` 左文件名
-//!         - `right_file` 右文件名
-//!         - `width` 列宽
-//! 3. `output_separator_row(width: usize)`
-//!     - 负责输出分割行
-//!     - 参数说明
-//!         - `width` 整个行的行宽
+//! 主要提供
+//! 1. 文本按照指定的终端宽度进行换行
+//! 2. 填充文本到指定宽度
+//! 3. 输出行、表头、分割线
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 #[allow(dead_code)]
@@ -109,9 +88,9 @@ pub fn padding_white_space(text: &str, width: usize, left_align: bool) -> String
 /// 输出时，对于wrap处理的文本要对行号，状态特殊判断，如果确实换行，则不增加行号，也不展示雷同的状态
 ///
 /// - `left_no` 左文件行号
-/// - `left_line` 左文件行文本，对于`ChangeTag::Insert`来说，该参数为""
+/// - `left_line` 左文件行文本，对于`ChangeTag::Insert`来说，该参数为None
 /// - `right_no` 右文件行号
-/// - `right_line` 右文件行文本，对于`ChangeTag::Delete`来说，该参数为""
+/// - `right_line` 右文件行文本，对于`ChangeTag::Delete`来说，该参数为None
 /// - `line_status` 该行状态，相同、插入、删除
 /// - `code_width` 代码列的宽度，如果一行文本的长度(指的是终端显示长度)超过该值会进行换行
 
@@ -171,6 +150,8 @@ pub fn output_wrapped_row(
 /// 负责输出对比终端的抬头
 /// - `left_file`  左文件
 /// - `right_file` 右文件
+/// - `code_width` 代码列宽
+/// - `no_width`   行号列宽
 pub fn output_wrapped_header(
     left_file: &str,
     right_file: &str,
@@ -195,6 +176,7 @@ pub fn output_wrapped_header(
 pub fn output_separator_row(width: usize) {
     println!("{}", "-".repeat(width));
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,8 +185,15 @@ mod tests {
     fn blank_line_to_wrap() {
         let text = String::from("");
         let v = wrap_code_width(Some(&text), 4);
-        assert_ne!(v, vec![String::new()]);
+        assert_eq!(v, vec![String::new()]);
         println!("{:#?}", v);
+    }
+
+    #[test]
+    fn empty_line_is_not_missing_line() {
+        assert_eq!(wrap_code_width(Some(""), 4), vec![String::new()]);
+
+        assert_eq!(wrap_code_width(None, 4), Vec::<String>::new());
     }
     #[test]
     fn no_need_to_wrap() {
@@ -233,10 +222,10 @@ mod tests {
         output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
         output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
         output_wrapped_row(
-            None,
-            None,
             Some(1),
             Some("a".repeat(16).as_str()),
+            None,
+            None,
             "Delete",
             CODE_WIDTH,
             NO_WIDTH,
@@ -247,10 +236,10 @@ mod tests {
         output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
         output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
         output_wrapped_row(
+            None,
+            None,
             Some(1),
             Some("a".repeat(16).as_str()),
-            None,
-            None,
             "Insert",
             CODE_WIDTH,
             NO_WIDTH,
