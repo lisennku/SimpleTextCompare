@@ -11,9 +11,14 @@ fn main() -> Result<()> {
     if let Some(path) = cli.path {
         let left_file = path.join(cli.left_file);
         let right_file = path.join(cli.right_file);
-        compare::compare_files_table_style(&left_file, &right_file)?;
+        compare::compare_files_table_style(&left_file, &right_file, cli.code_width, cli.no_width)?;
     } else {
-        compare::compare_files_table_style(&cli.left_file, &cli.right_file)?;
+        compare::compare_files_table_style(
+            &cli.left_file,
+            &cli.right_file,
+            cli.code_width,
+            cli.no_width,
+        )?;
     }
 
     Ok(())

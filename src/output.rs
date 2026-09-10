@@ -12,6 +12,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 const CODE_WIDTH: usize = 10;
 #[allow(dead_code)]
 const NO_WIDTH: usize = 5;
+const STATUS_WIDTH: usize = 6;
 /// 将文本按照显示宽度进行计算折叠
 /// - `text` 输入文本
 /// - `width` 指定的宽度
@@ -121,13 +122,15 @@ pub fn output_wrapped_row(
         let left_no = if i == 0 {
             left_no.map(|n| n.to_string()).unwrap_or("/".to_string())
         } else {
-            String::new()
+            // String::new();
+            String::from("/")
         };
 
         let right_no = if i == 0 {
             right_no.map(|n| n.to_string()).unwrap_or("/".to_string())
         } else {
-            String::new()
+            // String::new();
+            String::from("/")
         };
 
         // Vec的get方法，返回的是Option<&T>
@@ -138,11 +141,11 @@ pub fn output_wrapped_row(
 
         println!(
             "{} | {} | {} | {} | {}",
-            padding_white_space(&left_no, no_width, true),
+            padding_white_space(&left_no, no_width, false),
             padding_white_space(left_code, code_width, true),
-            padding_white_space(&right_no, no_width, true),
+            padding_white_space(&right_no, no_width, false),
             padding_white_space(right_code, code_width, true),
-            padding_white_space(line_status, code_width, true)
+            padding_white_space(line_status, STATUS_WIDTH, true)
         )
     }
 }
@@ -168,7 +171,7 @@ pub fn output_wrapped_header(
         &left_file,
         padding_white_space("行号", no_width, true),
         &right_file,
-        padding_white_space("状态", code_width, true),
+        padding_white_space("状态", STATUS_WIDTH, true),
     )
 }
 

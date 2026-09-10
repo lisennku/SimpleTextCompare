@@ -6,12 +6,17 @@ use crate::output;
 use anyhow::{Context, Result};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// 按照给定的文件，以表格形式输出两个文本之间的差异
 /// - `left`  左文件
 /// - `right` 右文件
-pub fn compare_files_table_style(left: &Path, right: &Path) -> Result<()> {
+pub fn compare_files_table_style(
+    left: &Path,
+    right: &Path,
+    code_width: usize,
+    no_width: usize,
+) -> Result<()> {
     let left_text =
         fs::read_to_string(left).with_context(|| format!("打开文件{}出错", left.display()))?;
     let right_text =
@@ -27,11 +32,11 @@ pub fn compare_files_table_style(left: &Path, right: &Path) -> Result<()> {
         .and_then(|name| name.to_str())
         .unwrap_or("<right>");
 
-    let code_width = 50_usize;
-    let no_width = 6_usize;
+    // let code_width = 50_usize;
+    // let no_width = 6_usize;
 
     output::output_wrapped_header(left_file_name, right_file_name, code_width, no_width);
-    output::output_separator_row(code_width * 3 + no_width * 2 + 3 * 4);
+    output::output_separator_row(code_width * 2 + no_width * 2 + 3 * 4 + 6);
 
     let mut left_no = 1_usize;
     let mut right_no = 1_usize;
@@ -87,7 +92,7 @@ mod tests {
     use super::*;
     #[test]
     fn test_empty_lines() -> Result<()> {
-        let p1 = PathBuf::from(r"C:\Users\LFJ\Desktop\new.txt");
+        let p1 = Path::new(r"C:\Users\LFJ\Desktop\new.txt");
         let s = fs::read_to_string(p1)?;
         for (idx, line) in s.lines().enumerate() {
             println!("{}:{}+", idx + 1, line);
@@ -96,14 +101,14 @@ mod tests {
     }
     #[test]
     fn test_compare_files_table_style() -> Result<()> {
-        let p1 = PathBuf::from(
+        let p1 = Path::new(
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\base.txt",
         );
-        let p2 = PathBuf::from(
+        let p2 = Path::new(
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\comp.txt",
         );
 
-        compare_files_table_style(&p1, &p2)?;
+        compare_files_table_style(&p1, &p2, 50, 3)?;
         Ok(())
     }
 }
