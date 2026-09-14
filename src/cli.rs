@@ -22,6 +22,10 @@ pub struct Cli {
     /// 行号列宽度，默认为4，在3-6之间
     #[arg(short, long, default_value_t = 4, value_parser = no_width_validate)]
     pub no_width: usize,
+    /// 是否u启用`less`控制显示
+    /// 显式输入--long时才启用
+    #[arg(long)]
+    pub less: bool,
 }
 
 fn code_width_validate(w: &str) -> Result<usize, String> {
