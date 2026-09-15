@@ -12,6 +12,9 @@ use std::path::Path;
 /// 按照给定的文件，以表格形式输出两个文本之间的差异
 /// - `left`  左文件
 /// - `right` 右文件
+/// - `code_width` 代码列宽
+/// - `no_width` 行号列宽
+/// - `writer` 写入对象， `less`或者标准输出等
 pub fn compare_files_table_style(
     left: &Path,
     right: &Path,

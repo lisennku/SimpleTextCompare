@@ -1,49 +1,82 @@
-//! 结构体`Cli`用于命令行参数
+//! # 结构体`Cli`用于命令行参数
+//!
+//! 命令行分为两个子命令
+//!
+//! - `conf` 用于进行配置
+//! - `diff` 用于文件比较
+//!
+//! # `conf`子命令
+//! `conf`子命令目前拥有`--list`/`--init`/`--code-width`/`--no-width`/`--less-path`参数
+//! - `--list`
+//!     - 展示配置
+//! - `--init`
+//!     - 初始化配置
+//! - `--code-width`
+//!     - 代码列宽设置
+//! - `--no-width`
+//!     - 行号列宽设置
+//! - `--less-path`
+//!     - `less`可执行程序位置
+//!
+//! `--list`与`--init`互斥，不可同时使用
+//!
+//! `--list`与其他参数一起使用时，先保存最新设置，再展示配置
+//!
+//! `--init`与其他参数一起使用时，先生成默认配置，再覆盖指定值并保存
+//! # `diff`子命令
+//! `diff`子命令目前拥有`left_file`/`right_file`/`--path`/`less`参数
+//! - `left_file` 指定左文件
+//! - `right_file` 指定右文件
+//! - `--path` 路径，当左右文件在统一路径下时使用，以便简略输入所有文件名
+//! - `--less` 是否启用`less`控制显示
+//!
+use anyhow::{Result, anyhow, bail};
 use clap::{self, ArgGroup, Args, Parser, Subcommand};
 use std::path::PathBuf;
 
-fn code_width_validate(w: &str) -> Result<usize, String> {
+fn code_width_validate(w: &str) -> Result<usize> {
     let width = w
         .parse::<usize>()
-        .map_err(|_| "宽度必须是正整数".to_string())?;
+        .map_err(|_| anyhow!("宽度必须是正整数"))?;
     if width < 40 || width > 60 {
-        return Err("宽度需在40-60之间".to_string());
+        bail!("宽度需在40-60之间");
     }
     Ok(width)
 }
-fn no_width_validate(w: &str) -> Result<usize, String> {
+fn no_width_validate(w: &str) -> Result<usize> {
     let width = w
         .parse::<usize>()
-        .map_err(|_| "宽度必须是正整数".to_string())?;
+        .map_err(|_| anyhow!("宽度必须是正整数"))?;
     if width < 4 || width > 7 {
-        return Err("宽度需在4-7之间".to_string());
+        bail!("宽度需在4-7之间");
     }
     Ok(width)
 }
-fn less_path_validate(p: &str) -> Result<PathBuf, String> {
+fn less_path_validate(p: &str) -> Result<PathBuf> {
     if p.is_empty() {
-        return Err("路径不能为空".to_string());
+        bail!("路径不能为空");
     }
     let path = PathBuf::from(p);
     let Ok(is_exists) = path.try_exists() else {
-        return Err("无法确认路径是否存在".to_string());
+        bail!("无法确认路径是否存在");
     };
 
     if !is_exists {
-        return Err("路径不存在".to_string());
+        bail!("路径不存在");
     };
 
     Ok(path)
 }
 /// 比较两个文件的差异
 ///
-/// conf子命令 用于配置宽度等配置项
+/// `conf`子命令 用于配置宽度等配置项
 ///
-/// diff子命令 用于显示两个文件的差异
+/// `diff`子命令 用于显示两个文件的差异
 #[derive(Parser, Debug)]
 #[command(version, about)]
-// #[command(flatten_help = true)] 是否将子命令的help信息展平到应用本身的--help
+// #[command(flatten_help = true)] // 是否将子命令的help信息展平到应用本身的--help
 pub struct Cli {
+    /// 子命令
     #[command(subcommand)]
     pub command: Command,
 }
@@ -64,13 +97,8 @@ pub struct Compare {
     /// 路径，当左右文件在统一路径下时使用
     #[arg(short, long)]
     pub path: Option<PathBuf>,
-    /// 代码列宽度 默认50 在40-60之间
-    #[arg(short, long, default_value_t = 50, value_parser = code_width_validate)]
-    pub code_width: usize,
-    /// 行号列宽度，默认为4，在3-6之间
-    #[arg(short, long, default_value_t = 4, value_parser = no_width_validate)]
-    pub no_width: usize,
     /// 是否启用`less`控制显示
+    ///
     /// 显式输入--long时才启用
     #[arg(long)]
     pub less: bool,
@@ -84,15 +112,15 @@ pub struct Config {
     /// 展示当前配置项内容
     #[arg(long, group = "config_action")]
     pub list: bool,
-    /// 进行配置初始化
+    /// 强制进行配置初始化
     #[arg(long, group = "config_action")]
     pub init: bool,
     /// 代码列宽度 默认50 在40-60之间
-    #[arg(long, default_value_t = 50, value_parser = code_width_validate)]
-    pub code_width: usize,
-    /// 行号列宽度，默认为4，在3-6之间
-    #[arg(long, default_value_t = 4, value_parser = no_width_validate)]
-    pub no_width: usize,
+    #[arg(long, value_parser = code_width_validate)]
+    pub code_width: Option<usize>,
+    /// 行号列宽度，默认为4，在4-7之间
+    #[arg(long, value_parser = no_width_validate)]
+    pub no_width: Option<usize>,
     /// less执行程序的路径
     #[arg(long, value_parser = less_path_validate)]
     pub less_path: Option<PathBuf>,

@@ -1,11 +1,19 @@
 //! 本模块用于在终端进行打印
+//!
 //! 打印概览如下
+//!
 //! 左行号 left文件 | 右行号 right文件 | 状态
+//!
 //!  ---------------------------------------
+//!
 //! 主要提供
+//!
 //! 1. 文本按照指定的终端宽度进行换行
+//!
 //! 2. 填充文本到指定宽度
+//!
 //! 3. 输出行、表头、分割线
+//!
 
 use std::io::{self, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -95,6 +103,7 @@ pub fn padding_white_space(text: &str, width: usize, left_align: bool) -> String
 /// - `right_line` 右文件行文本，对于`ChangeTag::Delete`来说，该参数为None
 /// - `line_status` 该行状态，相同、插入、删除
 /// - `code_width` 代码列的宽度，如果一行文本的长度(指的是终端显示长度)超过该值会进行换行
+/// - `writer` 写入对象， `less`或者标准输出等
 
 pub fn output_wrapped_row(
     left_no: Option<usize>,
@@ -159,6 +168,7 @@ pub fn output_wrapped_row(
 /// - `right_file` 右文件
 /// - `code_width` 代码列宽
 /// - `no_width`   行号列宽
+/// - `writer` 写入对象， `less`或者标准输出等
 pub fn output_wrapped_header(
     left_file: &str,
     right_file: &str,
