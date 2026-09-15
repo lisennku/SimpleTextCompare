@@ -1,17 +1,33 @@
 # Simple Text Compare 简单文本比较
 
-- 基础使用 逐行显示文本差异
-    - `stc left_file right_file`
-- 设置统一目录
-    - `stc left_file right_file -p dir_path`
-- 设置代码列宽度
-    - `stc left_file right_file --code-width 60`
-- 设置行号列宽度
-    - `stc left_file right_file --no-width 5`
+# 使用方法
+
+## 初始化
+
+在使用程序之前，需要先进行初始化，生成配置文件后，才可以继续使用
+`stc conf --init`
+
+## 配置
+
+- 获取配置
+  - `stc conf --list`
+- 设置列宽
+  - `stc conf --code-width xx` 代码列宽
+  - `stc conf --no-width xx` 行号列宽
+- 设置`less`路径
+  - `stc conf --less-path xx`
+- 需要注意
+  - `--list`/`--init`互斥，但是可以结合另外三个进行设置
+    - `--init`结合其他，先初始化后更改
+    - `--list`结合其他，先修改后展示
+
+## 对比
+
+`stc diff left_file right_file [--path file_dir] [-p file_dir]`
 
 # 终端显示说明
 
-当前版本不会刷新终端显示，会在执行命令后在下方直接显示，类似`cat`，但是没有控制输出长度
+当前版本不会刷新终端显示，会在执行命令后在下方直接显示
 
 # to-do
 
@@ -30,6 +46,10 @@
     - 统一错误处理
 - `unicode_width`
     - 字符宽度处理，用于输出
+- `serde`
+    - 序列化
+- `toml`
+    - 配合`serde`进行序列化
 
 # 开发笔记
 
@@ -45,23 +65,23 @@
       current_chars = String::new();
   ```
 
-  - 也可以使用`std::mem::take(&mut var)`来把里面的字符串拿走，同时把原变量留空
+    - 也可以使用`std::mem::take(&mut var)`来把里面的字符串拿走，同时把原变量留空
 
 - `clap`中`arg`的属性`value_parser`，可以传入一个函数，用于值的解析与限定
 
-  - 函数的参数是`&str`类型，返回值是`Result<dtype, String>`
+    - 函数的参数是`&str`类型，返回值是`Result<dtype, String>`
 
 - `Option`的`map`，对`Some`里的值进行闭包处理，但是不处理`None`
 
 - `Option`的`and_then`，对`Some`里的值进行闭包处理，并且闭包必须返回`Option`
 
-  - `and_then`函数会将`Option<Option<>>`拍平为`Option`
+    - `and_then`函数会将`Option<Option<>>`拍平为`Option`
 
 - `Result`的`map_err`，转换错误，但不改变成功值
 
 - `str`进行解析到数字时，需要显式指定具体类型`s.parse::<usize>()`
 
-  - 可以自动推断时除外
+    - 可以自动推断时除外
 
 
 - 测试显示输出
