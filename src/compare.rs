@@ -6,6 +6,7 @@ use crate::output;
 use anyhow::{Context, Result};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
+use std::io::Write;
 use std::path::Path;
 
 /// 按照给定的文件，以表格形式输出两个文本之间的差异
@@ -16,6 +17,7 @@ pub fn compare_files_table_style(
     right: &Path,
     code_width: usize,
     no_width: usize,
+    writer: &mut dyn Write,
 ) -> Result<()> {
     let left_text =
         fs::read_to_string(left).with_context(|| format!("打开文件{}出错", left.display()))?;
@@ -35,8 +37,14 @@ pub fn compare_files_table_style(
     // let code_width = 50_usize;
     // let no_width = 6_usize;
 
-    output::output_wrapped_header(left_file_name, right_file_name, code_width, no_width);
-    output::output_separator_row(code_width * 2 + no_width * 2 + 3 * 4 + 6);
+    output::output_wrapped_header(
+        left_file_name,
+        right_file_name,
+        code_width,
+        no_width,
+        writer,
+    )?;
+    output::output_separator_row(code_width * 2 + no_width * 2 + 3 * 4 + 6, writer)?;
 
     let mut left_no = 1_usize;
     let mut right_no = 1_usize;
@@ -53,7 +61,8 @@ pub fn compare_files_table_style(
                     LineStatus::Equal.to_str(),
                     code_width,
                     no_width,
-                );
+                    writer,
+                )?;
                 left_no += 1;
                 right_no += 1;
             }
@@ -66,7 +75,8 @@ pub fn compare_files_table_style(
                     LineStatus::Delete.to_str(),
                     code_width,
                     no_width,
-                );
+                    writer,
+                )?;
                 left_no += 1;
             }
             ChangeTag::Insert => {
@@ -78,7 +88,8 @@ pub fn compare_files_table_style(
                     LineStatus::Insert.to_str(),
                     code_width,
                     no_width,
-                );
+                    writer,
+                )?;
                 right_no += 1;
             }
         }
@@ -107,8 +118,8 @@ mod tests {
         let p2 = Path::new(
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\comp.txt",
         );
-
-        compare_files_table_style(&p1, &p2, 50, 3)?;
+        let mut w = std::io::stdout();
+        compare_files_table_style(&p1, &p2, 50, 3, &mut w)?;
         Ok(())
     }
 }

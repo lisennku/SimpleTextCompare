@@ -8,6 +8,7 @@ mod output;
 
 fn main() -> Result<()> {
     let cli = cli::Cli::parse();
+    let mut w = std::io::stdout();
     match cli.command {
         cli::Command::Diff(d) => {
             if let Some(path) = d.path {
@@ -18,6 +19,7 @@ fn main() -> Result<()> {
                     &right_file,
                     d.code_width,
                     d.no_width,
+                    &mut w,
                 )?;
             } else {
                 compare::compare_files_table_style(
@@ -25,6 +27,7 @@ fn main() -> Result<()> {
                     &d.right_file,
                     d.code_width,
                     d.no_width,
+                    &mut w,
                 )?;
             }
         }
@@ -32,6 +35,5 @@ fn main() -> Result<()> {
             println!("{:#?}", c);
         }
     }
-
     Ok(())
 }
