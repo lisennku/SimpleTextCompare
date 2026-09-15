@@ -7,6 +7,7 @@
 //! 2. 填充文本到指定宽度
 //! 3. 输出行、表头、分割线
 
+use std::io::{self, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 #[allow(dead_code)]
 const CODE_WIDTH: usize = 10;
@@ -103,7 +104,8 @@ pub fn output_wrapped_row(
     line_status: &str,
     code_width: usize,
     no_width: usize,
-) {
+    writer: &mut dyn Write,
+) -> io::Result<()> {
     // left_lines和right_lines此时为Vec<String>容器
     // 可能有一个元素，表示代码行没超过列宽
     // 可能有多个元素，表示代码行超过列宽发生折叠
@@ -139,15 +141,17 @@ pub fn output_wrapped_row(
         let right_code = right_lines.get(i).map(|l| l.as_str()).unwrap_or("-");
         let line_status = if i == 0 { line_status } else { "" };
 
-        println!(
+        writeln!(
+            writer,
             "{} | {} | {} | {} | {}",
             padding_white_space(&left_no, no_width, false),
             padding_white_space(left_code, code_width, true),
             padding_white_space(&right_no, no_width, false),
             padding_white_space(right_code, code_width, true),
             padding_white_space(line_status, STATUS_WIDTH, true)
-        )
+        )?;
     }
+    Ok(())
 }
 
 /// 负责输出对比终端的抬头
@@ -160,24 +164,29 @@ pub fn output_wrapped_header(
     right_file: &str,
     code_width: usize,
     no_width: usize,
-) {
+    writer: &mut dyn Write,
+) -> io::Result<()> {
     let left_file = padding_white_space(left_file, code_width, true);
 
     let right_file = padding_white_space(right_file, code_width, true);
 
-    println!(
+    writeln!(
+        writer,
         "{} | {} | {} | {} | {}",
         padding_white_space("行号", no_width, true),
         &left_file,
         padding_white_space("行号", no_width, true),
         &right_file,
         padding_white_space("状态", STATUS_WIDTH, true),
-    )
+    )?;
+
+    Ok(())
 }
 
 /// 负责输出分割线
-pub fn output_separator_row(width: usize) {
-    println!("{}", "-".repeat(width));
+pub fn output_separator_row(width: usize, writer: &mut dyn Write) -> io::Result<()> {
+    writeln!(writer, "{}", "-".repeat(width))?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -222,8 +231,9 @@ mod tests {
     }
     #[test]
     fn output_wrapped_delete() {
-        output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
-        output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
+        let mut w = std::io::stdout();
+        output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH, &mut w).unwrap();
+        output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4, &mut w).unwrap();
         output_wrapped_row(
             Some(1),
             Some("a".repeat(16).as_str()),
@@ -232,12 +242,15 @@ mod tests {
             "Delete",
             CODE_WIDTH,
             NO_WIDTH,
+            &mut w,
         )
+        .unwrap();
     }
     #[test]
     fn output_wrapped_insert() {
-        output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH);
-        output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4);
+        let mut w = std::io::stdout();
+        output_wrapped_header("left file", "right file", CODE_WIDTH, NO_WIDTH, &mut w).unwrap();
+        output_separator_row(2 * NO_WIDTH + 3 * CODE_WIDTH + 3 * 4, &mut w).unwrap();
         output_wrapped_row(
             None,
             None,
@@ -246,6 +259,8 @@ mod tests {
             "Insert",
             CODE_WIDTH,
             NO_WIDTH,
+            &mut w,
         )
+        .unwrap();
     }
 }
