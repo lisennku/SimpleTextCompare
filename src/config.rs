@@ -4,7 +4,6 @@ use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
-use std::io::Write;
 use std::path::PathBuf;
 use toml;
 /// 指定存放配置文件的目录名
@@ -94,10 +93,10 @@ impl ConfigManager {
         Ok(())
     }
 
-    pub fn list(&self, writer: &mut dyn Write) -> Result<()> {
+    pub fn list(&self) -> Result<()> {
         let config = self.load()?;
 
-        writeln!(writer, "{:#?}", config)?;
+        println!("{:#?}", config);
 
         Ok(())
     }

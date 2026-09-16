@@ -6,9 +6,9 @@ mod compare;
 mod config;
 mod line_status;
 mod output;
+mod pagers;
 
 fn main() -> Result<()> {
-    let mut w = std::io::stdout();
-    cli::Cli::parse().run(&mut w)?;
+    cli::Cli::parse().run()?;
     Ok(())
 }

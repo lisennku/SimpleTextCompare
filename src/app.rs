@@ -1,13 +1,12 @@
 //! 为cli::Cli添加`run`方法，用于解析命令行参数并执行对应动作
-use crate::{cli, compare, config};
+use crate::{cli, compare, config, pagers};
 use anyhow::Result;
-use std::io::Write;
 
 impl cli::Cli {
     /// `self` 表示命令行结构体本身
     ///
     /// `writer` 输出方
-    pub fn run(self, writer: &mut dyn Write) -> Result<()> {
+    pub fn run(self) -> Result<()> {
         // 构造配置文件管理者
         let manager = config::ConfigManager::new(config::get_config_dir()?);
         // 用户使用`--init`的话，表示需要初始化，此时不需要检查配置文件路径是否存在，也不需要检查配置内容
@@ -41,7 +40,7 @@ impl cli::Cli {
                 }
                 // 挪到最后的位置，确保conf --list --code-width 50 会先保存配置文件再读取
                 if c.list {
-                    manager.list(writer)?;
+                    manager.list()?;
                 }
             }
             cli::Command::Diff(d) => {
@@ -50,13 +49,17 @@ impl cli::Cli {
                     None => (d.left_file, d.right_file),
                 };
 
+                let mut p = pagers::Pager::new(d.less)?;
+
                 compare::compare_files_table_style(
                     &left_file,
                     &right_file,
                     app_config.code_width,
                     app_config.no_width,
-                    writer,
+                    p.writer(),
                 )?;
+
+                p.finish()?;
             }
         }
         Ok(())
