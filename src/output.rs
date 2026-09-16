@@ -22,6 +22,15 @@ const CODE_WIDTH: usize = 10;
 #[allow(dead_code)]
 const NO_WIDTH: usize = 5;
 const STATUS_WIDTH: usize = 6;
+
+/// 优化行号处理代码
+/// 抽象为一个函数
+fn format_line_no(index: usize, line_no: Option<usize>) -> String {
+    match (index, line_no) {
+        (0, Some(n)) => n.to_string(),
+        _ => "/".to_string(),
+    }
+}
 /// 将文本按照显示宽度进行计算折叠
 /// - `text` 输入文本
 /// - `width` 指定的宽度
@@ -130,19 +139,9 @@ pub fn output_wrapped_row(
     for i in 0..max_lines_cnt {
         // 先处理行号，因为传入的是Option，要进行处理拿到真实行号
         // 并且结合索引，只有第一个元素才显示行号
-        let left_no = if i == 0 {
-            left_no.map(|n| n.to_string()).unwrap_or("/".to_string())
-        } else {
-            // String::new();
-            String::from("/")
-        };
+        let left_no = format_line_no(i, left_no);
 
-        let right_no = if i == 0 {
-            right_no.map(|n| n.to_string()).unwrap_or("/".to_string())
-        } else {
-            // String::new();
-            String::from("/")
-        };
+        let right_no = format_line_no(i, right_no);
 
         // Vec的get方法，返回的是Option<&T>
         // 闭包的as_str显式进行从&String 到 &str的转换

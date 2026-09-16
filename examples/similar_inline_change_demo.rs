@@ -7,4 +7,7 @@ fn main() {
     for item in diff.iter_all_inline_changes() {
         println!("{:?}", item);
     }
+    println!("\x1b[31mA");
+    println!("\x1b[32mB");
+    println!("\x1b[0mC");
 }
