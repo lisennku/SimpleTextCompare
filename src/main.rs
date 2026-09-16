@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+mod ansi_config;
 mod app;
 mod cli;
 mod compare;

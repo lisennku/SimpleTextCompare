@@ -49,7 +49,7 @@ impl cli::Cli {
                     None => (d.left_file, d.right_file),
                 };
 
-                let mut p = pagers::Pager::new(d.less)?;
+                let mut p = pagers::Pager::new(d.less, app_config.less_path)?;
 
                 compare::compare_files_table_style(
                     &left_file,

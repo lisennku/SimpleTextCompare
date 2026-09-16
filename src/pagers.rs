@@ -6,6 +6,7 @@
 
 use anyhow::{Result, anyhow};
 use std::io::{self, IsTerminal, Write};
+use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
 
 /// `Pager`枚举
@@ -25,12 +26,14 @@ pub enum Pager {
 
 impl Pager {
     /// 构造函数 因启用`less`可能会产生失败，所以返回`Result`
-    pub fn new(is_less: bool) -> Result<Pager> {
+    pub fn new(is_less: bool, path: Option<PathBuf>) -> Result<Pager> {
         if !is_less || !io::stdout().is_terminal() {
             return Ok(Pager::Stdout(io::stdout()));
         }
 
-        let mut child = Command::new("less")
+        let less_path = path.unwrap_or_else(|| PathBuf::from("less"));
+
+        let mut child = Command::new(less_path)
             .arg("-FRSX")
             .stdin(Stdio::piped()) // 父进程输出通过管道进入子进程输入
             .spawn()?;
