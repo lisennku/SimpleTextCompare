@@ -1,6 +1,8 @@
 //! 为cli::Cli添加`run`方法，用于解析命令行参数并执行对应动作
+
 use crate::{cli, compare, config, pagers};
 use anyhow::Result;
+use std::io::{self, ErrorKind};
 
 impl cli::Cli {
     /// `self` 表示命令行结构体本身
@@ -51,13 +53,24 @@ impl cli::Cli {
 
                 let mut p = pagers::Pager::new(d.less, app_config.less_path)?;
 
-                compare::compare_files_table_style(
+                let res = compare::compare_files_table_style(
                     &left_file,
                     &right_file,
                     app_config.code_width,
                     app_config.no_width,
                     p.writer(),
-                )?;
+                ); // 此处不再使用?解析Result
+
+                if let Err(err) = res {
+                    // anyhow Error 降级
+                    let is_broken_pipe_err = err
+                        .downcast_ref::<io::Error>()
+                        .map(|ioe| ioe.kind() == ErrorKind::BrokenPipe)
+                        .unwrap_or(false);
+                    if !is_broken_pipe_err {
+                        return Err(err.into());
+                    }
+                }
 
                 p.finish()?;
             }
