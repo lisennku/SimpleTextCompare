@@ -15,8 +15,10 @@
 //! 3. 输出行、表头、分割线
 //!
 
+use crate::line_status::LineStatus;
 use std::io::{self, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+
 #[allow(dead_code)]
 const CODE_WIDTH: usize = 10;
 #[allow(dead_code)]
@@ -84,17 +86,28 @@ pub fn wrap_code_width(text: Option<&str>, width: usize) -> Vec<String> {
 /// - `text` 文本
 /// - `width` 指定宽度
 /// - `left_align` 左对齐
-pub fn padding_white_space(text: &str, width: usize, left_align: bool) -> String {
+/// - `line_status` `LineStatus`枚举，负责渲染对应的颜色
+pub fn padding_white_space(
+    text: &str,
+    width: usize,
+    left_align: bool,
+    line_status: Option<LineStatus>,
+) -> String {
     let occupied_width = UnicodeWidthStr::width(text);
+    let wrapped = match line_status {
+        Some(ls) => ls.wrap_ansi(text),
+        None => text.to_string(),
+    };
+
     if occupied_width >= width {
-        return text.to_string();
+        return wrapped;
     }
 
     let whites = " ".repeat(width - occupied_width);
     if left_align {
-        format!("{text}{whites}")
+        format!("{wrapped}{whites}")
     } else {
-        format!("{whites}{text}")
+        format!("{whites}{wrapped}")
     }
 }
 
@@ -110,7 +123,7 @@ pub fn padding_white_space(text: &str, width: usize, left_align: bool) -> String
 /// - `left_line` 左文件行文本，对于`ChangeTag::Insert`来说，该参数为None
 /// - `right_no` 右文件行号
 /// - `right_line` 右文件行文本，对于`ChangeTag::Delete`来说，该参数为None
-/// - `line_status` 该行状态，相同、插入、删除
+/// - `line_status` `LineStatus`枚举，负责表示具体文本和渲染颜色
 /// - `code_width` 代码列的宽度，如果一行文本的长度(指的是终端显示长度)超过该值会进行换行
 /// - `writer` 写入对象， `less`或者标准输出等
 
@@ -119,7 +132,7 @@ pub fn output_wrapped_row(
     left_line: Option<&str>,
     right_no: Option<usize>,
     right_line: Option<&str>,
-    line_status: &str,
+    line_status: LineStatus,
     code_width: usize,
     no_width: usize,
     writer: &mut dyn Write,
@@ -147,16 +160,16 @@ pub fn output_wrapped_row(
         // 闭包的as_str显式进行从&String 到 &str的转换
         let left_code = left_lines.get(i).map(|l| l.as_str()).unwrap_or("-");
         let right_code = right_lines.get(i).map(|l| l.as_str()).unwrap_or("-");
-        let line_status = if i == 0 { line_status } else { "" };
+        let line_status_text = if i == 0 { line_status.to_str() } else { "" };
 
         writeln!(
             writer,
             "{} | {} | {} | {} | {}",
-            padding_white_space(&left_no, no_width, false),
-            padding_white_space(left_code, code_width, true),
-            padding_white_space(&right_no, no_width, false),
-            padding_white_space(right_code, code_width, true),
-            padding_white_space(line_status, STATUS_WIDTH, true)
+            padding_white_space(&left_no, no_width, false, None),
+            padding_white_space(left_code, code_width, true, Some(line_status)),
+            padding_white_space(&right_no, no_width, false, None),
+            padding_white_space(right_code, code_width, true, Some(line_status)),
+            padding_white_space(line_status_text, STATUS_WIDTH, true, None)
         )?;
     }
     Ok(())
@@ -175,18 +188,18 @@ pub fn output_wrapped_header(
     no_width: usize,
     writer: &mut dyn Write,
 ) -> io::Result<()> {
-    let left_file = padding_white_space(left_file, code_width, true);
+    let left_file = padding_white_space(left_file, code_width, true, None);
 
-    let right_file = padding_white_space(right_file, code_width, true);
+    let right_file = padding_white_space(right_file, code_width, true, None);
 
     writeln!(
         writer,
         "{} | {} | {} | {} | {}",
-        padding_white_space("行号", no_width, true),
+        padding_white_space("行号", no_width, true, None),
         &left_file,
-        padding_white_space("行号", no_width, true),
+        padding_white_space("行号", no_width, true, None),
         &right_file,
-        padding_white_space("状态", STATUS_WIDTH, true),
+        padding_white_space("状态", STATUS_WIDTH, true, None),
     )?;
 
     Ok(())
@@ -248,7 +261,7 @@ mod tests {
             Some("a".repeat(16).as_str()),
             None,
             None,
-            "Delete",
+            LineStatus::Delete,
             CODE_WIDTH,
             NO_WIDTH,
             &mut w,
@@ -265,7 +278,7 @@ mod tests {
             None,
             Some(1),
             Some("a".repeat(16).as_str()),
-            "Insert",
+            LineStatus::Insert,
             CODE_WIDTH,
             NO_WIDTH,
             &mut w,

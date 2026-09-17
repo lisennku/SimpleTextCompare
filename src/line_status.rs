@@ -5,6 +5,9 @@
 /// - `Equal` 表示左右一致
 /// - `Delete` 表示右文件较于左文件 删除了改行
 /// - `Insert` 表示右文件较于左文件 新增了改行
+use crate::ansi_config::{GREEN, RED, RESET};
+
+#[derive(Copy, Clone)]
 pub enum LineStatus {
     Equal,
     Delete,
@@ -19,6 +22,14 @@ impl LineStatus {
             LineStatus::Insert => "Insert",
         }
     }
+
+    pub fn wrap_ansi(&self, input: &str) -> String {
+        match self {
+            LineStatus::Equal => format!("{input}"),
+            LineStatus::Insert => format!("{GREEN}{input}{RESET}"),
+            LineStatus::Delete => format!("{RED}{input}{RESET}"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -26,18 +37,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn equal_test() {
+    fn line_status_equal_test() {
         let e = LineStatus::Equal;
         assert_eq!(e.to_str(), "Equal");
     }
     #[test]
-    fn delete_test() {
+    fn line_status_delete_test() {
         let e = LineStatus::Delete;
         assert_eq!(e.to_str(), "Delete");
     }
     #[test]
-    fn insert_test() {
+    fn line_status_insert_test() {
         let e = LineStatus::Insert;
         assert_eq!(e.to_str(), "Insert");
+    }
+    #[test]
+    fn line_status_wrap_ansi_test() {
+        let d = LineStatus::Delete;
+        let i = LineStatus::Insert;
+        let e = LineStatus::Equal;
+
+        println!("{}", d.wrap_ansi("this line is deleted"));
+        println!("{}", i.wrap_ansi("this line is inserted"));
+        println!("{}", e.wrap_ansi("this line is not changed"));
     }
 }
