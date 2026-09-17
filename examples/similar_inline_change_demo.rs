@@ -6,7 +6,9 @@ fn main() {
     // let s1 = String::from("same1\ndelete_me\nsame2\nreplace_old\nsame3\nsame4\n");
     // let s2 = String::from("same1\nsame2\nreplace_new\nsame3\ninsert_me\nsame4\n");
     // let diff = TextDiff::from_lines(&s1, &s2);
-
+    let v = vec![(true, "aaa"), (false, "bbb"), (true, "ccc\n")];
+    let s: String = v.iter().map(|x| x.1).collect();
+    println!("{:?}", s);
     let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
     let left = base_path.join("left.txt");
     let right = base_path.join("right.txt");
@@ -18,12 +20,13 @@ fn main() {
     let mut cnt = 0_usize;
     for op in diff.ops() {
         println!("tag is {:#?}", op.tag());
-        let iter = diff.iter_inline_changes(op);
-        for change in iter {
-            cnt += 1;
-            println!("{:?}", change);
-        }
-        println!("cnt is {cnt}");
+        println!("diff is {:#?}", op);
+        // let iter = diff.iter_inline_changes(op);
+        // for change in iter {
+        //     cnt += 1;
+        //     println!("{:?}", change);
+        // }
+        // println!("cnt is {cnt}");
     }
 
     // let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
