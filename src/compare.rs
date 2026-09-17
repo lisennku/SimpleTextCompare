@@ -4,7 +4,7 @@
 use crate::line_status::LineStatus;
 use crate::output;
 use anyhow::{Context, Result};
-use similar::{ChangeTag, TextDiff};
+use similar::{ChangeTag, DiffTag, TextDiff};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -15,6 +15,14 @@ use std::path::Path;
 /// - `code_width` 代码列宽
 /// - `no_width` 行号列宽
 /// - `writer` 写入对象， `less`或者标准输出等
+///
+/// 将代码中使用的`diff.iter_all_changes`替换为`diff.ops()` + `op.iter_inline_changes`
+///
+/// 并根据`op.tag`判断，只有`Replace`才会进入`iter_inline_changes`，
+///
+/// 其他场景通过`op.old_range`/`op.new_rang`和`diff.old_slice`/`diff.new_slice`获取文本
+///
+/// 避免inline算法耗时
 pub fn compare_files_table_style(
     left: &Path,
     right: &Path,
@@ -49,51 +57,102 @@ pub fn compare_files_table_style(
     )?;
     output::output_separator_row(code_width * 2 + no_width * 2 + 3 * 4 + 6, writer)?;
 
-    let mut left_no = 1_usize;
-    let mut right_no = 1_usize;
+    // 使用diff.ops按块捕获，以获取replace相关信息，而不是经iter_all_changes将Replace拆解为Delete和Insert
+    for op in diff.ops() {
+        match op.tag() {
+            DiffTag::Equal => {
+                for (o, n) in op.old_range().zip(op.new_range()) {
+                    let left_no = Some(o + 1);
+                    let right_no = Some(n + 1);
+                    let left_line = diff
+                        .old_slice(o)
+                        .map(|x| x.trim_end_matches('\n').trim_end_matches('\r'));
+                    let right_line = diff
+                        .new_slice(n)
+                        .map(|x| x.trim_end_matches('\n').trim_end_matches('\r'));
+                    output::output_wrapped_row(
+                        left_no,
+                        left_line,
+                        right_no,
+                        right_line,
+                        LineStatus::Equal,
+                        code_width,
+                        no_width,
+                        writer,
+                    )?;
+                }
+            }
+            DiffTag::Delete => {
+                for o in op.old_range() {
+                    let left_no = Some(o + 1);
+                    let left_line = diff
+                        .old_slice(o)
+                        .map(|x| x.trim_end_matches('\n').trim_end_matches('\r'));
+                    output::output_wrapped_row(
+                        left_no,
+                        left_line,
+                        None,
+                        None,
+                        LineStatus::Delete,
+                        code_width,
+                        no_width,
+                        writer,
+                    )?;
+                }
+            }
+            DiffTag::Insert => {
+                for n in op.new_range() {
+                    let right_no = Some(n + 1);
+                    let right_line = diff
+                        .new_slice(n)
+                        .map(|x| x.trim_end_matches('\n').trim_end_matches('\r'));
+                    output::output_wrapped_row(
+                        None,
+                        None,
+                        right_no,
+                        right_line,
+                        LineStatus::Insert,
+                        code_width,
+                        no_width,
+                        writer,
+                    )?;
+                }
+            }
+            DiffTag::Replace => {
+                for inline in diff.iter_inline_changes(op) {
+                    let left_no = inline.old_index().map(|n| n + 1);
+                    let right_no = inline.new_index().map(|n| n + 1);
+                    let line: String = inline.values().iter().map(|x| x.1).collect();
+                    let line = line.as_str().trim_end_matches('\n').trim_end_matches('\r');
 
-    for change in diff.iter_all_changes() {
-        let line = change.value().trim_end_matches('\n').trim_end_matches('\r');
-        match change.tag() {
-            ChangeTag::Equal => {
-                output::output_wrapped_row(
-                    Some(left_no),
-                    Some(line),
-                    Some(right_no),
-                    Some(line),
-                    LineStatus::Equal,
-                    code_width,
-                    no_width,
-                    writer,
-                )?;
-                left_no += 1;
-                right_no += 1;
-            }
-            ChangeTag::Delete => {
-                output::output_wrapped_row(
-                    Some(left_no),
-                    Some(line),
-                    None,
-                    None,
-                    LineStatus::Delete,
-                    code_width,
-                    no_width,
-                    writer,
-                )?;
-                left_no += 1;
-            }
-            ChangeTag::Insert => {
-                output::output_wrapped_row(
-                    None,
-                    None,
-                    Some(right_no),
-                    Some(line),
-                    LineStatus::Insert,
-                    code_width,
-                    no_width,
-                    writer,
-                )?;
-                right_no += 1;
+                    match inline.tag() {
+                        ChangeTag::Delete => {
+                            output::output_wrapped_row(
+                                left_no,
+                                Some(line),
+                                None,
+                                None,
+                                LineStatus::Delete,
+                                code_width,
+                                no_width,
+                                writer,
+                            )?;
+                        }
+                        ChangeTag::Insert => {
+                            output::output_wrapped_row(
+                                None,
+                                None,
+                                right_no,
+                                Some(line),
+                                LineStatus::Insert,
+                                code_width,
+                                no_width,
+                                writer,
+                            )?;
+                        }
+                        _ => unreachable!(),
+                    }
+                }
             }
         }
     }
