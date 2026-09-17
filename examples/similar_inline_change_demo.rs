@@ -1,13 +1,18 @@
 use similar::{ChangeTag, TextDiff};
+use std::fs;
+use std::path::PathBuf;
 
 fn main() {
-    let s1 = String::from("aa bb cc dd");
-    let s2 = String::from("ab dd bc de");
-    let diff = TextDiff::from_words(&s1, &s2);
-    for item in diff.iter_all_inline_changes() {
-        println!("{:?}", item);
+    let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
+    let left = base_path.join("left.txt");
+    let right = base_path.join("right.txt");
+
+    let left_str = fs::read_to_string(&left).unwrap();
+    let right_str = fs::read_to_string(&right).unwrap();
+
+    let diff = TextDiff::from_lines(&left_str, &right_str);
+
+    for i in diff.ops() {
+        println!("{:#?}", i.as_tag_tuple());
     }
-    println!("\x1b[31mA");
-    println!("\x1b[32mB");
-    println!("\x1b[0mC");
 }
