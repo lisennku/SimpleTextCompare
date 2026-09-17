@@ -1,0 +1,132 @@
+行号   | left.txt                                           | 行号   | right.txt                                          | 状态  
+----------------------------------------------------------------------------------------------------------------------------------
+     1 | SimpleTextCompare 测试文本 A                       |      1 | SimpleTextCompare 测试文本 A                       | Equal 
+     2 | 本文件用于验证长文本分页、左右对照、整行差异和行内 |      2 | 本文件用于验证长文本分页、左右对照、整行差异和行内 | Equal 
+     / | 字符差异。                                         |      / | 字符差异。                                         |       
+     3 |                                                    |      3 |                                                    | Equal 
+     4 | [basic]                                            |      4 | [basic]                                            | Equal 
+     5 | name = SimpleTextCompare                           |      5 | name = SimpleTextCompare                           | Equal 
+     6 | [31mversion = 1.0.0[0m                                    |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |      6 | [32mversion = 1.1.0[0m                                    | Insert
+     7 | environment = development                          |      7 | environment = development                          | Equal 
+     8 | owner = Cong Shu                                   |      8 | owner = Cong Shu                                   | Equal 
+     9 | active = true                                      |      9 | active = true                                      | Equal 
+    10 | created_at = 2026-01-01 09:00:00                   |     10 | created_at = 2026-01-01 09:00:00                   | Equal 
+    11 | [31mupdated_at = 2026-09-17 08:30:00[0m                   |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     11 | [32mupdated_at = 2026-09-17 09:45:00[0m                   | Insert
+     / | [32m-[0m                                                  |     12 | [32maxxxxxxxxxxxx[0m                                      | Insert
+    12 |                                                    |     13 |                                                    | Equal 
+    13 | [terminal]                                         |     14 | [terminal]                                         | Equal 
+    14 | [31mtheme = light[0m                                      |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     15 | [32mtheme = dark[0m                                       | Insert
+    15 | prompt = stc>                                      |     16 | prompt = stc>                                      | Equal 
+    16 | show_time = true                                   |     17 | show_time = true                                   | Equal 
+    17 | color_enabled = true                               |     18 | color_enabled = true                               | Equal 
+    18 | [31mwidth = 100[0m                                        |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     19 | [32mwidth = 120[0m                                        | Insert
+    19 | height = 40                                        |     20 | height = 40                                        | Equal 
+    20 | unicode = enabled                                  |     21 | unicode = enabled                                  | Equal 
+    21 | fallback_encoding = utf-8                          |     22 | fallback_encoding = utf-8                          | Equal 
+    22 |                                                    |     23 |                                                    | Equal 
+    23 | [compare]                                          |     24 | [compare]                                          | Equal 
+    24 | algorithm = myers                                  |     25 | algorithm = myers                                  | Equal 
+    25 | ignore_whitespace = false                          |     26 | ignore_whitespace = false                          | Equal 
+    26 | [31mignore_case = false[0m                                |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     27 | [32mignore_case = true[0m                                 | Insert
+    27 | context_lines = 3                                  |     28 | context_lines = 3                                  | Equal 
+    28 | word_level = true                                  |     29 | word_level = true                                  | Equal 
+    29 | [31mmax_file_size = 10MB[0m                               |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     30 | [32mmax_file_size = 20MB[0m                               | Insert
+    30 | encoding = utf-8                                   |     31 | encoding = utf-8                                   | Equal 
+    31 | [31mtrim_trailing_spaces = false[0m                       |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     32 | [32mtrim_trailing_spaces = true[0m                        | Insert
+    32 |                                                    |     33 |                                                    | Equal 
+    33 | [output]                                           |     34 | [output]                                           | Equal 
+    34 | pager = less                                       |     35 | pager = less                                       | Equal 
+     / | [32m-[0m                                                  |     36 | [32mpager_path = C:\ProgramData\chocolatey\bin\less.ex[0m | Insert
+     / | [32m-[0m                                                  |      / | [32me[0m                                                  |       
+    35 | pager_args = -FRSX                                 |     37 | pager_args = -FRSX                                 | Equal 
+    36 | preserve_color = true                              |     38 | preserve_color = true                              | Equal 
+    37 | line_numbers = true                                |     39 | line_numbers = true                                | Equal 
+    38 | separator = |                                      |     40 | separator = |                                      | Equal 
+    39 | align = left                                       |     41 | align = left                                       | Equal 
+    40 | show_file_names = true                             |     42 | show_file_names = true                             | Equal 
+    41 |                                                    |     43 |                                                    | Equal 
+    42 | [network]                                          |     44 | [network]                                          | Equal 
+    43 | host = api.example.com                             |     45 | host = api.example.com                             | Equal 
+    44 | port = 8080                                        |     46 | port = 8080                                        | Equal 
+    45 | [31mprotocol = http[0m                                    |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     47 | [32mtransport = https[0m                                  | Insert
+    46 | connect_timeout = 10                               |     48 | connect_timeout = 10                               | Equal 
+    47 | read_timeout = 30                                  |     49 | read_timeout = 30                                  | Equal 
+    48 | [31mretry = 3[0m                                          |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     50 | [32mretry = 5[0m                                          | Insert
+    49 | proxy = disabled                                   |     51 | proxy = disabled                                   | Equal 
+    50 |                                                    |     52 |                                                    | Equal 
+    51 | [database]                                         |     53 | [database]                                         | Equal 
+    52 | driver = mysql                                     |     54 | driver = mysql                                     | Equal 
+    53 | host = db.example.com                              |     55 | host = db.example.com                              | Equal 
+    54 | port = 3306                                        |     56 | port = 3306                                        | Equal 
+    55 | database = simple_compare                          |     57 | database = simple_compare                          | Equal 
+    56 | user = stc_user                                    |     58 | user = stc_user                                    | Equal 
+    57 | [31mpassword = simpletext[0m                              |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     59 | [32mpassword = simpletext2026[0m                          | Insert
+    58 | pool_size = 20                                     |     60 | pool_size = 20                                     | Equal 
+    59 | idle_timeout = 300                                 |     61 | idle_timeout = 300                                 | Equal 
+    60 |                                                    |     62 |                                                    | Equal 
+    61 | [logging]                                          |     63 | [logging]                                          | Equal 
+    62 | level = INFO                                       |     64 | level = INFO                                       | Equal 
+    63 | target = stdout                                    |     65 | target = stdout                                    | Equal 
+    64 | file = logs/stc.log                                |     66 | file = logs/stc.log                                | Equal 
+    65 | rotate = daily                                     |     67 | rotate = daily                                     | Equal 
+    66 | max_files = 14                                     |     68 | max_files = 14                                     | Equal 
+    67 | [31mformat = text[0m                                      |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     69 | [32mformat = json[0m                                      | Insert
+    68 | include_thread = false                             |     70 | include_thread = false                             | Equal 
+    69 |                                                    |     71 |                                                    | Equal 
+    70 | [feature]                                          |     72 | [feature]                                          | Equal 
+    71 | split_view = true                                  |     73 | split_view = true                                  | Equal 
+    72 | inline_diff = true                                 |     74 | inline_diff = true                                 | Equal 
+    73 | fold = false                                       |     75 | fold = false                                       | Equal 
+    74 | search = true                                      |     76 | search = true                                      | Equal 
+    75 | export = true                                      |     77 | export = true                                      | Equal 
+    76 | [31mlegacy_mode = false[0m                                |      / | [31m-[0m                                                  | Delete
+    77 |                                                    |     78 |                                                    | Equal 
+    78 | [diagnostics]                                      |     79 | [diagnostics]                                      | Equal 
+    79 | collect_metrics = true                             |     80 | collect_metrics = true                             | Equal 
+    80 | endpoint = /metrics                                |     81 | endpoint = /metrics                                | Equal 
+    81 | interval_seconds = 60                              |     82 | interval_seconds = 60                              | Equal 
+    82 |                                                    |     83 |                                                    | Equal 
+    83 | [deployment]                                       |     84 | [deployment]                                       | Equal 
+    84 | [31mprimary_region = shanghai[0m                          |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |     85 | [32mbackup_region = beijing[0m                            | Insert
+    85 | replicas = 2                                       |     86 | replicas = 2                                       | Equal 
+    86 | cpu_limit = 2                                      |     87 | cpu_limit = 2                                      | Equal 
+    87 | memory_limit = 512Mi                               |     88 | memory_limit = 512Mi                               | Equal 
+    88 | rolling_update = true                              |     89 | rolling_update = true                              | Equal 
+    89 | health_check = /health                             |     90 | health_check = /health                             | Equal 
+    90 |                                                    |     91 |                                                    | Equal 
+    91 | [notes]                                            |     92 | [notes]                                            | Equal 
+    92 | 中文说明：目前输出在命令下方直接显示，长文本可能造 |     93 | 中文说明：目前输出在命令下方直接显示，长文本可能造 | Equal 
+     / | 成终端滚动和查看不便。                             |      / | 成终端滚动和查看不便。                             |       
+    93 | Unicode 示例：简体中文、繁體中文、日本語、한국어、 |     94 | Unicode 示例：简体中文、繁體中文、日本語、한국어、 | Equal 
+     / | emoji😀                                            |      / | emoji😀                                            |       
+    94 | Long line: AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJ |     95 | Long line: AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJ | Equal 
+     / | JKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTT          |      / | JKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTT          |       
+    95 | Code line: let result = compare_file(left_path, ri |     96 | Code line: let result = compare_file(left_path, ri | Equal 
+     / | ght_path, options).context("compare failed")?;     |      / | ght_path, options).context("compare failed")?;     |       
+    96 | Same line: 这一行在左右文件中完全相同，用来测试上  |     97 | Same line: 这一行在左右文件中完全相同，用来测试上  | Equal 
+     / | 下文显示。                                         |      / | 下文显示。                                         |       
+    97 | Same line: 这一行继续保持不变，确保差异块之间有足  |     98 | Same line: 这一行继续保持不变，确保差异块之间有足  | Equal 
+     / | 够的公共内容。                                     |      / | 够的公共内容。                                     |       
+    98 | Same line: 分页时应该能够完整显示这一部分，不会因  |     99 | Same line: 分页时应该能够完整显示这一部分，不会因  | Equal 
+     / | 为过长而丢失。                                     |      / | 为过长而丢失。                                     |       
+    99 |                                                    |    100 |                                                    | Equal 
+   100 | [summary]                                          |    101 | [summary]                                          | Equal 
+   101 | status = ready                                     |    102 | status = ready                                     | Equal 
+   102 | [31mchecks = 18[0m                                        |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |    103 | [32mchecks = 20[0m                                        | Insert
+   103 | warnings = 0                                       |    104 | warnings = 0                                       | Equal 
+   104 | errors = 0                                         |    105 | errors = 0                                         | Equal 
+   105 | [31mmessage = left file completed successfully[0m         |      / | [31m-[0m                                                  | Delete
+     / | [32m-[0m                                                  |    106 | [32mmessage = right file completed successfully[0m        | Insert
