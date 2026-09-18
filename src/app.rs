@@ -2,7 +2,7 @@
 
 use crate::{cli, compare, config, pagers};
 use anyhow::Result;
-use std::io::{self, ErrorKind};
+use std::io::{self, ErrorKind, IsTerminal};
 
 impl cli::Cli {
     /// `self` 表示命令行结构体本身
@@ -37,6 +37,11 @@ impl cli::Cli {
                     changed = true;
                 }
 
+                if let Some(inline) = c.inline {
+                    app_config.inline = inline;
+                    changed = true;
+                }
+
                 if changed {
                     manager.save(&app_config)?;
                 }
@@ -51,7 +56,11 @@ impl cli::Cli {
                     None => (d.left_file, d.right_file),
                 };
 
+                let enable_inline = app_config.inline;
+
                 let mut p = pagers::Pager::new(d.less, app_config.less_path)?;
+
+                let use_color = io::stdout().is_terminal();
 
                 let res = compare::compare_files_table_style(
                     &left_file,
@@ -59,6 +68,8 @@ impl cli::Cli {
                     app_config.code_width,
                     app_config.no_width,
                     p.writer(),
+                    enable_inline,
+                    use_color,
                 ); // 此处不再使用?解析Result
 
                 if let Err(err) = res {

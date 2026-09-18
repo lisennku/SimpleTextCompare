@@ -26,20 +26,27 @@ pub struct AppConfig {
     pub code_width: usize,
     pub no_width: usize,
     pub less_path: Option<PathBuf>,
+    pub inline: bool,
 }
 
 impl AppConfig {
     #[allow(dead_code)]
-    pub fn new(code_width: usize, no_width: usize, less_path: Option<PathBuf>) -> Self {
+    pub fn new(
+        code_width: usize,
+        no_width: usize,
+        less_path: Option<PathBuf>,
+        inline: bool,
+    ) -> Self {
         Self {
             code_width,
             no_width,
             less_path,
+            inline,
         }
     }
     pub fn validate(&self) -> Result<()> {
-        if self.code_width < 40 || self.code_width > 60 {
-            bail!("代码列宽度需在40-60之间");
+        if self.code_width < 40 || self.code_width > 100 {
+            bail!("代码列宽度需在40-100之间");
         }
         if self.no_width < 4 || self.no_width > 7 {
             bail!("行号列宽需在4-7")
@@ -63,6 +70,7 @@ impl Default for AppConfig {
             code_width: 50_usize,
             no_width: 4_usize,
             less_path: None,
+            inline: false,
         }
     }
 }

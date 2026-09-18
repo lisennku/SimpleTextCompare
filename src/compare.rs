@@ -3,6 +3,7 @@
 //! 1. 按照文本对照形式输出差异
 use crate::line_status::LineStatus;
 use crate::output;
+use crate::output::output_replace_row;
 use anyhow::{Context, Result};
 use similar::{ChangeTag, DiffTag, TextDiff};
 use std::fs;
@@ -29,6 +30,8 @@ pub fn compare_files_table_style(
     code_width: usize,
     no_width: usize,
     writer: &mut dyn Write,
+    inline: bool,
+    color: bool,
 ) -> Result<()> {
     let left_text =
         fs::read_to_string(left).with_context(|| format!("打开文件{}出错", left.display()))?;
@@ -54,6 +57,7 @@ pub fn compare_files_table_style(
         code_width,
         no_width,
         writer,
+        color,
     )?;
     output::output_separator_row(code_width * 2 + no_width * 2 + 3 * 4 + 6, writer)?;
 
@@ -79,6 +83,7 @@ pub fn compare_files_table_style(
                         code_width,
                         no_width,
                         writer,
+                        color,
                     )?;
                 }
             }
@@ -97,6 +102,7 @@ pub fn compare_files_table_style(
                         code_width,
                         no_width,
                         writer,
+                        color,
                     )?;
                 }
             }
@@ -115,42 +121,124 @@ pub fn compare_files_table_style(
                         code_width,
                         no_width,
                         writer,
+                        color,
                     )?;
                 }
             }
             DiffTag::Replace => {
-                for inline in diff.iter_inline_changes(op) {
-                    let left_no = inline.old_index().map(|n| n + 1);
-                    let right_no = inline.new_index().map(|n| n + 1);
-                    let line: String = inline.values().iter().map(|x| x.1).collect();
-                    let line = line.as_str().trim_end_matches('\n').trim_end_matches('\r');
+                if !inline {
+                    for inline in diff.iter_inline_changes(op) {
+                        let left_no = inline.old_index().map(|n| n + 1);
+                        let right_no = inline.new_index().map(|n| n + 1);
+                        let line: String = inline.values().iter().map(|x| x.1).collect();
+                        let line = line.as_str().trim_end_matches('\n').trim_end_matches('\r');
 
-                    match inline.tag() {
-                        ChangeTag::Delete => {
-                            output::output_wrapped_row(
-                                left_no,
-                                Some(line),
-                                None,
-                                None,
-                                LineStatus::Delete,
-                                code_width,
-                                no_width,
-                                writer,
-                            )?;
+                        match inline.tag() {
+                            ChangeTag::Delete => {
+                                output::output_wrapped_row(
+                                    left_no,
+                                    Some(line),
+                                    None,
+                                    None,
+                                    LineStatus::Delete,
+                                    code_width,
+                                    no_width,
+                                    writer,
+                                    color,
+                                )?;
+                            }
+                            ChangeTag::Insert => {
+                                output::output_wrapped_row(
+                                    None,
+                                    None,
+                                    right_no,
+                                    Some(line),
+                                    LineStatus::Insert,
+                                    code_width,
+                                    no_width,
+                                    writer,
+                                    color,
+                                )?;
+                            }
+                            _ => unreachable!(),
                         }
-                        ChangeTag::Insert => {
-                            output::output_wrapped_row(
-                                None,
-                                None,
-                                right_no,
-                                Some(line),
-                                LineStatus::Insert,
-                                code_width,
-                                no_width,
-                                writer,
-                            )?;
+                    }
+                } else {
+                    let mut delete_vec: Vec<(Option<usize>, Vec<(bool, String)>)> = Vec::new();
+                    let mut insert_vec: Vec<(Option<usize>, Vec<(bool, String)>)> = Vec::new();
+
+                    for inline_item in diff.iter_inline_changes(op) {
+                        match inline_item.tag() {
+                            ChangeTag::Delete => delete_vec.push((
+                                inline_item.old_index(),
+                                inline_item
+                                    .values()
+                                    .iter()
+                                    .map(|&(b, s)| {
+                                        (
+                                            b,
+                                            s.trim_end_matches('\n')
+                                                .trim_end_matches('\r')
+                                                .to_string(),
+                                        )
+                                    })
+                                    .collect(),
+                            )),
+                            ChangeTag::Insert => insert_vec.push((
+                                inline_item.old_index(),
+                                inline_item
+                                    .values()
+                                    .iter()
+                                    .map(|&(b, s)| {
+                                        (
+                                            b,
+                                            s.trim_end_matches('\n')
+                                                .trim_end_matches('\r')
+                                                .to_string(),
+                                        )
+                                    })
+                                    .collect(),
+                            )),
+                            _ => unreachable!(),
                         }
-                        _ => unreachable!(),
+                    }
+
+                    let max_lines_cnt = delete_vec.len().max(insert_vec.len()).max(1);
+                    for i in 0..max_lines_cnt {
+                        let (left_no, left_segs) = match delete_vec.get(i) {
+                            Some((no, segs)) => (
+                                *no,
+                                Some(
+                                    segs.iter()
+                                        .map(|(b, s)| (*b, s.as_str()))
+                                        .collect::<Vec<(bool, &str)>>(),
+                                ),
+                            ),
+                            None => (None, None),
+                        };
+
+                        let (right_no, right_segs) = match insert_vec.get(i) {
+                            Some((no, segs)) => (
+                                *no,
+                                Some(
+                                    segs.iter()
+                                        .map(|(b, s)| (*b, s.as_str()))
+                                        .collect::<Vec<(bool, &str)>>(),
+                                ),
+                            ),
+                            None => (None, None),
+                        };
+
+                        let _ = output_replace_row(
+                            left_no,
+                            left_segs.as_deref(),
+                            right_no,
+                            right_segs.as_deref(),
+                            code_width,
+                            no_width,
+                            writer,
+                            color,
+                        );
                     }
                 }
             }
@@ -181,7 +269,7 @@ mod tests {
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\comp.txt",
         );
         let mut w = std::io::stdout();
-        compare_files_table_style(&p1, &p2, 50, 3, &mut w)?;
+        compare_files_table_style(&p1, &p2, 50, 3, &mut w, false, true)?;
         Ok(())
     }
 }

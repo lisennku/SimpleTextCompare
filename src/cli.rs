@@ -17,6 +17,8 @@
 //!     - 行号列宽设置
 //! - `--less-path`
 //!     - `less`可执行程序位置
+//! - `--inline`
+//!     - 是否开启行内比较 将`Replace`的差异放到一行
 //!
 //! `--list`与`--init`互斥，不可同时使用
 //!
@@ -31,15 +33,15 @@
 //! - `--less` 是否启用`less`控制显示
 //!
 use anyhow::{Result, anyhow, bail};
-use clap::{self, ArgGroup, Args, Parser, Subcommand};
+use clap::{self, ArgAction, ArgGroup, Args, Parser, Subcommand};
 use std::path::PathBuf;
 
 fn code_width_validate(w: &str) -> Result<usize> {
     let width = w
         .parse::<usize>()
         .map_err(|_| anyhow!("宽度必须是正整数"))?;
-    if width < 40 || width > 60 {
-        bail!("宽度需在40-60之间");
+    if width < 40 || width > 100 {
+        bail!("宽度需在40-100之间");
     }
     Ok(width)
 }
@@ -124,4 +126,15 @@ pub struct Config {
     /// less执行程序的路径
     #[arg(long, value_parser = less_path_validate)]
     pub less_path: Option<PathBuf>,
+    /// 是否启用行内比较
+    /// --inline参数要区分如下场景
+    ///
+    /// - 不输入参数`--inline` 表示从配置表取数
+    /// - 输入`--inline` 表示设置为`true`
+    /// - 输入`--inline=false` 表示设置为`false`
+    ///
+    /// `ArgAction::Set + num_args + default_missing_value`组合起来的意思就是
+    /// 开启参数，接收0或1个对应值参数，如果为0，则用默认值
+    #[arg(long, action = ArgAction::Set, num_args = 0..=1, default_missing_value = "true",require_equals = true)]
+    pub inline: Option<bool>,
 }
