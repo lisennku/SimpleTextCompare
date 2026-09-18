@@ -1,4 +1,4 @@
-use similar::{DiffOp, TextDiff};
+use similar::TextDiff;
 fn main() {
     let s1 = String::from("aa bb cc dd\nff ee gg hh");
     let s2 = String::from("ab dd bc de\nfg ef hh gg");

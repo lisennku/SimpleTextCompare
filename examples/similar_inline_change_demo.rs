@@ -1,4 +1,4 @@
-use similar::{ChangeTag, DiffTag, TextDiff};
+use similar::TextDiff;
 use std::fs;
 use std::path::PathBuf;
 
@@ -20,13 +20,13 @@ fn main() {
     let mut cnt = 0_usize;
     for op in diff.ops() {
         println!("tag is {:#?}", op.tag());
-        println!("diff is {:#?}", op);
-        // let iter = diff.iter_inline_changes(op);
-        // for change in iter {
-        //     cnt += 1;
-        //     println!("{:?}", change);
-        // }
-        // println!("cnt is {cnt}");
+        // println!("diff is {:#?}", op);
+        let iter = diff.iter_inline_changes(op);
+        for change in iter {
+            cnt += 1;
+            println!("{:?}", change);
+        }
+        println!("cnt is {cnt}");
     }
 
     // let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
