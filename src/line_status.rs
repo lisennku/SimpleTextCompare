@@ -5,9 +5,9 @@
 /// - `Equal` 表示左右一致
 /// - `Delete` 表示右文件较于左文件 删除了改行
 /// - `Insert` 表示右文件较于左文件 新增了改行
-use crate::ansi_config::{GREEN, RED, RESET};
+use crate::ansi_config::{GREEN, RED, RESET, YELLOW};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
 pub enum LineStatus {
     Equal,
@@ -35,6 +35,24 @@ impl LineStatus {
             LineStatus::Insert => format!("{GREEN}{input}{RESET}"),
             LineStatus::Delete => format!("{RED}{input}{RESET}"),
             LineStatus::Replace => unreachable!("do not use this"),
+        }
+    }
+
+    pub fn piece_color(&self, color: bool, is_emphasis: bool) -> Option<&str> {
+        if !color {
+            return None;
+        }
+        match self {
+            LineStatus::Equal => None,
+            LineStatus::Delete => Some(RED),
+            LineStatus::Insert => Some(GREEN),
+            LineStatus::Replace => {
+                if is_emphasis {
+                    Some(YELLOW)
+                } else {
+                    None
+                }
+            }
         }
     }
 }

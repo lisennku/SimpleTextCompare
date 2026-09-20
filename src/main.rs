@@ -8,6 +8,7 @@ mod config;
 mod line_status;
 mod output;
 mod pagers;
+mod row;
 
 fn main() -> Result<()> {
     cli::Cli::parse().run()?;
