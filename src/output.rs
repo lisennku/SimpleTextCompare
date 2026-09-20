@@ -89,6 +89,7 @@ pub fn wrap_code_width(text: Option<&str>, width: usize) -> Vec<String> {
 /// - `width` 指定宽度
 /// - `left_align` 左对齐
 /// - `line_status` `LineStatus`枚举，负责渲染对应的颜色
+/// - `color` 是否渲染颜色，如果是重定向则不添加
 pub fn padding_white_space(
     text: &str,
     width: usize,
@@ -129,6 +130,7 @@ pub fn padding_white_space(
 /// - `line_status` `LineStatus`枚举，负责表示具体文本和渲染颜色
 /// - `code_width` 代码列的宽度，如果一行文本的长度(指的是终端显示长度)超过该值会进行换行
 /// - `writer` 写入对象， `less`或者标准输出等
+/// - `color` 是否渲染颜色，如果是重定向则不添加
 
 pub fn output_wrapped_row(
     left_no: Option<usize>,
@@ -185,6 +187,7 @@ pub fn output_wrapped_row(
 /// - `code_width` 代码列宽
 /// - `no_width`   行号列宽
 /// - `writer` 写入对象， `less`或者标准输出等
+/// - `color` 是否渲染颜色，如果是重定向则不添加
 pub fn output_wrapped_header(
     left_file: &str,
     right_file: &str,
@@ -233,6 +236,7 @@ pub fn output_separator_row(width: usize, writer: &mut dyn Write) -> io::Result<
 /// 参数
 /// - `segs` 外部`diff.iter_inline_changes(op)`产出结果的`values`
 /// - `width` 指定的宽度
+/// - `color` 是否渲染颜色，如果是重定向则不添加
 
 pub fn wrap_pad_emphasis_for_replace(
     segs: Option<&[(bool, &str)]>,

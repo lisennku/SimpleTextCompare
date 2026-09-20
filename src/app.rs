@@ -60,6 +60,7 @@ impl cli::Cli {
 
                 let mut p = pagers::Pager::new(d.less, app_config.less_path)?;
 
+                // 判断是否重定向
                 let use_color = io::stdout().is_terminal();
 
                 let res = compare::compare_files_table_style(

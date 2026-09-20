@@ -164,17 +164,20 @@ pub fn compare_files_table_style(
                         }
                     }
                 } else {
+                    // 分别存储Replace拆解出来的Delete和Insert
+                    // diff.iter_inline_changes产出的是带有tag/old_index/new_index/values的结构体的迭代器
                     let mut delete_vec: Vec<(Option<usize>, Vec<(bool, String)>)> = Vec::new();
                     let mut insert_vec: Vec<(Option<usize>, Vec<(bool, String)>)> = Vec::new();
-
+                    // 根据tag分别放到对应vec
                     for inline_item in diff.iter_inline_changes(op) {
                         match inline_item.tag() {
                             ChangeTag::Delete => delete_vec.push((
                                 inline_item.old_index(),
                                 inline_item
-                                    .values()
+                                    .values() // 此处values()返回值类型为&[(bool. &str]
                                     .iter()
                                     .map(|&(b, s)| {
+                                        // 通过&(b, s)模式匹配出对应的bool和&str，再将&str转为String
                                         (
                                             b,
                                             s.trim_end_matches('\n')
@@ -205,6 +208,8 @@ pub fn compare_files_table_style(
 
                     let max_lines_cnt = delete_vec.len().max(insert_vec.len()).max(1);
                     for i in 0..max_lines_cnt {
+                        // 通过循环，将Delete和Insert的数据同时传入渲染函数
+                        // 因为渲染函数接受Option，因此get能够自然的传参而不需要特殊处理
                         let (left_no, left_segs) = match delete_vec.get(i) {
                             Some((no, segs)) => (
                                 *no,

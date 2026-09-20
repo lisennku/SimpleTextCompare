@@ -16,6 +16,9 @@
   - `stc conf --no-width xx` 行号列宽
 - 设置`less`路径
   - `stc conf --less-path xx`
+- 设置`inline` 是否启用行内对比
+  - `stc conf --inline` 设置为`true`
+  - `stc conf --inline=false` 设置为`false`
 - 需要注意
   - `--list`/`--init`互斥，但是可以结合另外三个进行设置
     - `--init`结合其他，先初始化后更改
@@ -36,6 +39,7 @@
   - 配置表保存于`~/stc_conf/stc.toml`
 - [x] 输出长度控制，启用`--less`参数，将输出转移到`less`，需提前安装否则会导致`panic`
 - [x] 颜色标记
+- [x] 行内对比
 - [ ] 差异类型限制
 - [ ] 新增终端显示
 
