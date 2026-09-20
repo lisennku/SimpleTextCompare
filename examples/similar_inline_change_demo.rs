@@ -20,7 +20,9 @@ fn main() {
     let mut cnt = 0_usize;
     for op in diff.ops() {
         println!("tag is {:#?}", op.tag());
-        // println!("diff is {:#?}", op);
+        println!("the op is ------");
+        println!("diff is {:?}", op);
+        println!("the inline is ------");
         let iter = diff.iter_inline_changes(op);
         for change in iter {
             cnt += 1;
