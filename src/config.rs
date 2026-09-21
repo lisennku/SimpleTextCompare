@@ -117,7 +117,10 @@ impl ConfigManager {
             }
         }
 
-        fs::write(&self.config_file, content)?;
+        // 使用临时文件+rename保证原子性
+        let tmp = self.config_file.with_extension("toml.tmp");
+        fs::write(&tmp, &content)?;
+        fs::rename(&tmp, &self.config_file)?;
 
         Ok(())
     }

@@ -47,7 +47,7 @@ pub fn padding_white_space(text: &str, width: usize, left_align: bool) -> String
         return text.to_string();
     }
 
-    let whites = " ".repeat(width - occupied_width);
+    let whites = " ".repeat(width.saturating_sub(occupied_width));
     if left_align {
         format!("{text}{whites}")
     } else {
@@ -182,8 +182,8 @@ pub fn render_rows(
         let max_lines_cnt = left_segs.len().max(right_segs.len()).max(1);
 
         let placeholder = match row.status.piece_color(color, true) {
-            Some(c) => format!("{c}-{RESET}{}", " ".repeat(code_width - 1)),
-            None => format!("{}{}", "-", " ".repeat(code_width - 1)),
+            Some(c) => format!("{c}-{RESET}{}", " ".repeat(code_width.saturating_sub(1))),
+            None => format!("{}{}", "-", " ".repeat(code_width.saturating_sub(1))),
         };
 
         for i in 0..max_lines_cnt {

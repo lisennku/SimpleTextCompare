@@ -98,10 +98,15 @@ pub fn compare_files_git_style(
 
     let unified_diff = diff.unified_diff();
 
+    let chunks = unified_diff.iter_hunks().collect::<Vec<_>>();
+    if chunks.is_empty() {
+        return Ok(());
+    }
+
     writeln!(writer, "--- {}", left_file_name)?;
     writeln!(writer, "+++ {}", right_file_name)?;
 
-    for hunk in unified_diff.iter_hunks() {
+    for hunk in chunks {
         if color {
             writeln!(writer, "{}{}{}", CYAN, hunk.header(), RESET)?;
         } else {
@@ -139,6 +144,7 @@ pub fn compare_files_git_style(
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
     #[test]
     fn test_empty_lines() -> Result<()> {
         let p1 = Path::new(r"C:\Users\LFJ\Desktop\new.txt");
@@ -183,6 +189,17 @@ mod tests {
 
         compare_files_git_style(&left, &right, &mut w, false)?;
 
+        Ok(())
+    }
+    #[test]
+    fn test_compare_files_table_injection() -> Result<()> {
+        let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
+        let left = base_path.join("left_injection.txt");
+        let right = base_path.join("right_injection.txt");
+
+        let mut w = std::io::stdout();
+
+        compare_files_table_style(&left, &right, 70, 3, &mut w, false, true)?;
         Ok(())
     }
 }
