@@ -40,30 +40,18 @@ fn format_line_no(index: usize, line_no: Option<usize>) -> String {
 /// - `text` 文本
 /// - `width` 指定宽度
 /// - `left_align` 左对齐
-/// - `line_status` `LineStatus`枚举，负责渲染对应的颜色
-/// - `color` 是否渲染颜色，如果是重定向则不添加
-pub fn padding_white_space(
-    text: &str,
-    width: usize,
-    left_align: bool,
-    line_status: Option<LineStatus>,
-    color: bool,
-) -> String {
+pub fn padding_white_space(text: &str, width: usize, left_align: bool) -> String {
     let occupied_width = UnicodeWidthStr::width(text);
-    let wrapped = match line_status {
-        Some(ls) => ls.wrap_ansi(text, color),
-        None => text.to_string(),
-    };
 
     if occupied_width >= width {
-        return wrapped;
+        return text.to_string();
     }
 
     let whites = " ".repeat(width - occupied_width);
     if left_align {
-        format!("{wrapped}{whites}")
+        format!("{text}{whites}")
     } else {
-        format!("{whites}{wrapped}")
+        format!("{whites}{text}")
     }
 }
 
@@ -82,18 +70,18 @@ pub fn output_wrapped_header(
     writer: &mut dyn Write,
     _color: bool,
 ) -> io::Result<()> {
-    let left_file = padding_white_space(left_file, code_width, true, None, false);
+    let left_file = padding_white_space(left_file, code_width, true);
 
-    let right_file = padding_white_space(right_file, code_width, true, None, false);
+    let right_file = padding_white_space(right_file, code_width, true);
 
     writeln!(
         writer,
         "{} | {} | {} | {} | {}",
-        padding_white_space("行号", no_width, true, None, false),
+        padding_white_space("行号", no_width, true),
         &left_file,
-        padding_white_space("行号", no_width, true, None, false),
+        padding_white_space("行号", no_width, true),
         &right_file,
-        padding_white_space("状态", STATUS_WIDTH, true, None, false),
+        padding_white_space("状态", STATUS_WIDTH, true),
     )?;
 
     Ok(())
@@ -209,11 +197,11 @@ pub fn render_rows(
             writeln!(
                 writer,
                 "{} | {} | {} | {} | {}",
-                padding_white_space(&left_no, no_width, false, None, false),
+                padding_white_space(&left_no, no_width, false,),
                 left_seg,
-                padding_white_space(&right_no, no_width, false, None, false),
+                padding_white_space(&right_no, no_width, false,),
                 right_seg,
-                padding_white_space(status_text, STATUS_WIDTH, true, None, false)
+                padding_white_space(status_text, STATUS_WIDTH, true,)
             )?;
         }
     }
