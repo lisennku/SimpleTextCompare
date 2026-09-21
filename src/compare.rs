@@ -17,14 +17,14 @@ use std::path::Path;
 /// - `code_width` 代码列宽
 /// - `no_width` 行号列宽
 /// - `writer` 写入对象， `less`或者标准输出等
+/// - `inline` 控制是否启用行内比较
+/// - `color` 控制是否进行`ANSI`着色
 ///
-/// 将代码中使用的`diff.iter_all_changes`替换为`diff.ops()` + `op.iter_inline_changes`
+/// 通过`build_rows`函数，将`diff`，依据是否开启行内比较，产出每个块内，每行的数据集
 ///
-/// 并根据`op.tag`判断，只有`Replace`才会进入`iter_inline_changes`，
+/// 数据集是以`Row`为元素的容器，每个`Row`都是一行待处理的数据，有左行号，左代码，右行号，右代码，和状态
 ///
-/// 其他场景通过`op.old_range`/`op.new_rang`和`diff.old_slice`/`diff.new_slice`获取文本
-///
-/// 避免inline算法耗时
+/// 产出的数据集，通过`render_rows`，进行渲染输出
 pub fn compare_files_table_style(
     left: &Path,
     right: &Path,
@@ -48,9 +48,6 @@ pub fn compare_files_table_style(
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("<right>");
-
-    // let code_width = 50_usize;
-    // let no_width = 6_usize;
 
     output::output_wrapped_header(
         left_file_name,

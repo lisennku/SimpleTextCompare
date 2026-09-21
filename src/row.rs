@@ -26,7 +26,7 @@
 //! - 针对`Insert`类型
 //!     - `left_*`都为`None`
 //! - 针对`Replace`类型
-//!     - 如果启用`--inline`，则将`left_line`/`right_line`均填充值
+//!     - 如果启用`--inline`，则将`left_line`/`right_line`均填充值，可能是`None`
 //!     - 如果未启用`--inline`，则按照`Insert`/`Delete`处理
 use crate::line_status::LineStatus;
 use similar::{ChangeTag, DiffOp, DiffTag, TextDiff};

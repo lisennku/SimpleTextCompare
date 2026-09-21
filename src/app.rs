@@ -7,7 +7,13 @@ use std::io::{self, ErrorKind, IsTerminal};
 impl cli::Cli {
     /// `self` 表示命令行结构体本身
     ///
-    /// `writer` 输出方
+    /// 进行初始化时不需要判断配置路径&配置文件是否存在，因此优先特殊处理
+    ///
+    /// 除`init`外，其他操作要先判断配置文件的存在，以及配置项的正确
+    ///
+    /// 输出时判断是否在终端，以配合`less`参数控制是否启用`less`
+    ///
+    /// 同时判断是否重定向，以便于输入文件时不启用着色
     pub fn run(self) -> Result<()> {
         // 构造配置文件管理者
         let manager = config::ConfigManager::new(config::get_config_dir()?);

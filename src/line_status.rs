@@ -1,12 +1,12 @@
 //! 用于提供描述行状态的枚举
 //!
 
+use crate::ansi_config::{GREEN, RED, RESET, YELLOW};
 /// 表示每行的状态
 /// - `Equal` 表示左右一致
-/// - `Delete` 表示右文件较于左文件 删除了改行
-/// - `Insert` 表示右文件较于左文件 新增了改行
-use crate::ansi_config::{GREEN, RED, RESET, YELLOW};
-
+/// - `Delete` 表示右文件较于左文件 删除了该行
+/// - `Insert` 表示右文件较于左文件 新增了该行
+/// - `Replace` 表示左右文件不同
 #[derive(Copy, Clone, Debug)]
 #[allow(dead_code)]
 pub enum LineStatus {
@@ -38,6 +38,15 @@ impl LineStatus {
         }
     }
 
+    /// 返回着色的值
+    ///
+    /// 如果不需要着色，`color=false`，返回None
+    ///
+    /// 针对`Equal` 不需要着色
+    ///
+    /// 针对`Delete`/`Insert`，不考虑`is_emphasis`，整行着色
+    ///
+    /// 只有`Replace`时才考虑
     pub fn piece_color(&self, color: bool, is_emphasis: bool) -> Option<&str> {
         if !color {
             return None;

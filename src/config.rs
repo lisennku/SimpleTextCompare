@@ -1,4 +1,4 @@
-//! 提供用于序列化与反序列化的配置文件结构体`AppConfig`，和管理配置文件的`ConfigManger`
+//! 提供用于序列化与反序列化的配置文件结构体`AppConfig`，和管理配置文件的`ConfigManager`
 
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
@@ -6,9 +6,9 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 use toml;
-/// 指定存放配置文件的目录名
-const CONFIG_FILE_NAME: &str = r"stc.toml";
 /// 指定配置文件名
+const CONFIG_FILE_NAME: &str = r"stc.toml";
+/// 指定存放配置文件的目录名
 const CONFIG_FOLDER_NAME: &str = "stc_conf";
 
 /// # `AppConfig`
@@ -16,11 +16,12 @@ const CONFIG_FOLDER_NAME: &str = "stc_conf";
 /// - `code_width` 代码列宽
 /// - `no_width` 行号列宽
 /// - `less_path` `less`可执行程序的位置
+/// - `inline` 是否启用行内对比
 /// ## 方法
 /// - `new` 根据传入的参数返回一个`AppConfig`对象
 /// - `validate` 校验配置项是否合法
 /// ## `Default trait`
-/// 实现了`default`函数，默认以`50_usize`/`4_usize`/`None`传入
+/// 实现了`default`函数，默认以`50_usize`/`4_usize`/`None`/`false`传入
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AppConfig {
     pub code_width: usize,

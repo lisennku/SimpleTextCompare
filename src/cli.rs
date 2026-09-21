@@ -6,7 +6,7 @@
 //! - `diff` 用于文件比较
 //!
 //! # `conf`子命令
-//! `conf`子命令目前拥有`--list`/`--init`/`--code-width`/`--no-width`/`--less-path`参数
+//! `conf`子命令目前拥有`--list`/`--init`/`--code-width`/`--no-width`/`--less-path`/`--inline`参数
 //! - `--list`
 //!     - 展示配置
 //! - `--init`
@@ -26,7 +26,7 @@
 //!
 //! `--init`与其他参数一起使用时，先生成默认配置，再覆盖指定值并保存
 //! # `diff`子命令
-//! `diff`子命令目前拥有`left_file`/`right_file`/`--path`/`less`参数
+//! `diff`子命令目前拥有`left_file`/`right_file`/`--path`/`--less`参数
 //! - `left_file` 指定左文件
 //! - `right_file` 指定右文件
 //! - `--path` 路径，当左右文件在统一路径下时使用，以便简略输入所有文件名
@@ -101,7 +101,7 @@ pub struct Compare {
     pub path: Option<PathBuf>,
     /// 是否启用`less`控制显示
     ///
-    /// 显式输入--long时才启用
+    /// 显式输入--less时才启用
     #[arg(long)]
     pub less: bool,
 }
@@ -117,7 +117,7 @@ pub struct Config {
     /// 强制进行配置初始化
     #[arg(long, group = "config_action")]
     pub init: bool,
-    /// 代码列宽度 默认50 在40-60之间
+    /// 代码列宽度 默认50 在40-100之间
     #[arg(long, value_parser = code_width_validate)]
     pub code_width: Option<usize>,
     /// 行号列宽度，默认为4，在4-7之间

@@ -73,7 +73,7 @@ pub fn padding_white_space(
 /// - `code_width` 代码列宽
 /// - `no_width`   行号列宽
 /// - `writer` 写入对象， `less`或者标准输出等
-/// - `color` 是否渲染颜色，如果是重定向则不添加
+/// - `_color` 是否渲染颜色，如果是重定向则不添加，但此函数不涉及染色，因此只声明不启用
 pub fn output_wrapped_header(
     left_file: &str,
     right_file: &str,
@@ -105,6 +105,21 @@ pub fn output_separator_row(width: usize, writer: &mut dyn Write) -> io::Result<
     Ok(())
 }
 
+/// 进行代码折叠，只处理`Row`里的`left_line`和`right_line`
+///
+/// 负责依据指定的代码列宽进行折叠，染色和填充列宽(针对不满足指定列宽的子行)
+///
+/// 内部使用`Vec<(usize, Vec<(bool, String)>)>`来表示对一行代码的折叠结构
+/// - `(usize, Vec<(bool, String)>)`
+///     - `usize` 表示当前子行的`unicode`字符长度
+///     - `Vec<(bool, String)>` 表示当前子行内的着色片段列表
+///         - `bool`表示是否进行重点着色
+///         - `String` 表示该片段的文本
+///
+///     - 处理逻辑是每次填充字符时判断当前的`bool`和最后一个元素的`bool`是否相同，相同则直接`append`，不同则开启一个新的元素
+///         - 原因是要保留行内着色的`bool`
+///
+/// 收集后进行闭包着色与填充处理
 pub fn format_side(
     segs: Option<&[(bool, String)]>,
     width: usize,
@@ -162,6 +177,9 @@ pub fn format_side(
         .collect()
 }
 
+/// 输出每个处理后的行
+///
+/// 因为要输出的行可能被分成多个子行，因此需要循环处理
 pub fn render_rows(
     rows: &[Row],
     code_width: usize,
@@ -175,11 +193,6 @@ pub fn render_rows(
 
         let max_lines_cnt = left_segs.len().max(right_segs.len()).max(1);
 
-        // let placeholder = if !color {
-        //     format!("{}{}", "-", " ".repeat(code_width - 1))
-        // } else {
-        //     format!("{}{}{}{}", YELLOW, "-", RESET, " ".repeat(code_width - 1))
-        // };
         let placeholder = match row.status.piece_color(color, true) {
             Some(c) => format!("{c}-{RESET}{}", " ".repeat(code_width - 1)),
             None => format!("{}{}", "-", " ".repeat(code_width - 1)),
