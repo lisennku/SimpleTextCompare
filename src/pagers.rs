@@ -46,7 +46,6 @@ impl Pager {
     }
 
     ///统一返回各个变体的`writer`
-
     pub fn writer(&mut self) -> &mut dyn Write {
         match self {
             Pager::Stdout(w) => w,

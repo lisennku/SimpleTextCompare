@@ -211,8 +211,6 @@ pub fn render_rows(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_saturating_minus() {
         let a = 10_usize;

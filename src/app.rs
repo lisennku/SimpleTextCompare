@@ -69,15 +69,23 @@ impl cli::Cli {
                 // 判断是否重定向
                 let use_color = io::stdout().is_terminal();
 
-                let res = compare::compare_files_table_style(
-                    &left_file,
-                    &right_file,
-                    app_config.code_width,
-                    app_config.no_width,
-                    p.writer(),
-                    enable_inline,
-                    use_color,
-                ); // 此处不再使用?解析Result
+                let res = match d.style {
+                    cli::DiffStyle::Git => compare::compare_files_git_style(
+                        &left_file,
+                        &right_file,
+                        p.writer(),
+                        use_color,
+                    ),
+                    cli::DiffStyle::Table => compare::compare_files_table_style(
+                        &left_file,
+                        &right_file,
+                        app_config.code_width,
+                        app_config.no_width,
+                        p.writer(),
+                        enable_inline,
+                        use_color,
+                    ),
+                };
 
                 if let Err(err) = res {
                     // anyhow Error 降级
@@ -86,7 +94,7 @@ impl cli::Cli {
                         .map(|ioe| ioe.kind() == ErrorKind::BrokenPipe)
                         .unwrap_or(false);
                     if !is_broken_pipe_err {
-                        return Err(err.into());
+                        return Err(err);
                     }
                 }
 

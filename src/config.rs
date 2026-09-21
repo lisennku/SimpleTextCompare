@@ -1,11 +1,10 @@
 //! 提供用于序列化与反序列化的配置文件结构体`AppConfig`，和管理配置文件的`ConfigManager`
-
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
-use toml;
+
 /// 指定配置文件名
 const CONFIG_FILE_NAME: &str = r"stc.toml";
 /// 指定存放配置文件的目录名

@@ -2,11 +2,12 @@
 //! 提供
 //! 1. 按照文本对照形式输出差异
 
+use crate::ansi_config::{CYAN, GREEN, RED, RESET};
 use crate::output;
 use crate::output::render_rows;
 use crate::row::build_rows;
 use anyhow::{Context, Result};
-use similar::TextDiff;
+use similar::{ChangeTag, TextDiff};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -64,10 +65,80 @@ pub fn compare_files_table_style(
 
     Ok(())
 }
+/// 使用`git diff`的样式进行输出
+///
+/// 没有行内染色的判断，因为当前模式下，都是按行比较
+///
+/// - `left`  左文件
+/// - `right` 右文件
+/// - `writer` 写入对象， `less`或者标准输出等
+/// - `color` 控制是否进行`ANSI`着色
+///
+/// 通过`diff.unified_diff`返回的`UnifiedDiff`对象进行处理
+pub fn compare_files_git_style(
+    left: &Path,
+    right: &Path,
+    writer: &mut dyn Write,
+    color: bool,
+) -> Result<()> {
+    let left_text =
+        fs::read_to_string(left).with_context(|| format!("打开文件{}出错", left.display()))?;
+    let right_text =
+        fs::read_to_string(right).with_context(|| format!("打开文件{}出错", right.display()))?;
+    let diff = TextDiff::from_lines(&left_text, &right_text);
+
+    let left_file_name = left
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("<left>");
+    let right_file_name = right
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("<right>");
+
+    let unified_diff = diff.unified_diff();
+
+    writeln!(writer, "--- {}", left_file_name)?;
+    writeln!(writer, "+++ {}", right_file_name)?;
+
+    for hunk in unified_diff.iter_hunks() {
+        if color {
+            writeln!(writer, "{}{}{}", CYAN, hunk.header(), RESET)?;
+        } else {
+            writeln!(writer, "{}", hunk.header())?;
+        }
+        for change in hunk.iter_changes() {
+            let text = change.to_string_lossy();
+            let text = text.trim_end_matches('\n').trim_end_matches('\r');
+            match change.tag() {
+                ChangeTag::Equal => {
+                    writeln!(writer, " {}", text)?;
+                }
+                ChangeTag::Insert => {
+                    if color {
+                        writeln!(writer, "{}+{}{}", GREEN, text, RESET)?;
+                    } else {
+                        writeln!(writer, "+{}", text)?;
+                    }
+                }
+                ChangeTag::Delete => {
+                    if color {
+                        writeln!(writer, "{}-{}{}", RED, text, RESET)?;
+                    } else {
+                        writeln!(writer, "-{}", text)?;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::PathBuf;
     #[test]
     fn test_empty_lines() -> Result<()> {
         let p1 = Path::new(r"C:\Users\LFJ\Desktop\new.txt");
@@ -87,6 +158,31 @@ mod tests {
         );
         let mut w = std::io::stdout();
         compare_files_table_style(&p1, &p2, 50, 3, &mut w, false, true)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_compare_files_git_style_color() -> Result<()> {
+        let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
+        let left = base_path.join("left.txt");
+        let right = base_path.join("right.txt");
+
+        let mut w = std::io::stdout();
+
+        compare_files_git_style(&left, &right, &mut w, true)?;
+
+        Ok(())
+    }
+    #[test]
+    fn test_compare_files_git_style_no_color() -> Result<()> {
+        let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
+        let left = base_path.join("left.txt");
+        let right = base_path.join("right.txt");
+
+        let mut w = std::io::stdout();
+
+        compare_files_git_style(&left, &right, &mut w, false)?;
+
         Ok(())
     }
 }

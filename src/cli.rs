@@ -31,9 +31,10 @@
 //! - `right_file` 指定右文件
 //! - `--path` 路径，当左右文件在统一路径下时使用，以便简略输入所有文件名
 //! - `--less` 是否启用`less`控制显示
+//! - `--style` 对比样式
 //!
 use anyhow::{Result, anyhow, bail};
-use clap::{self, ArgAction, ArgGroup, Args, Parser, Subcommand};
+use clap::{self, ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
 fn code_width_validate(w: &str) -> Result<usize> {
@@ -69,6 +70,15 @@ fn less_path_validate(p: &str) -> Result<PathBuf> {
 
     Ok(path)
 }
+
+/// 用于`Diff`的`style`变体的枚举
+/// - `Git` 启用类似`git diff`的输出样式
+/// - `Table` 启用左右对比的输出方式
+#[derive(ValueEnum, Debug, Clone)]
+pub enum DiffStyle {
+    Git,
+    Table,
+}
 /// 比较两个文件的差异
 ///
 /// `conf`子命令 用于配置宽度等配置项
@@ -90,6 +100,7 @@ pub enum Command {
     /// 文件比较
     Diff(Compare),
 }
+
 #[derive(Args, Debug)]
 pub struct Compare {
     /// 左侧文件
@@ -104,6 +115,9 @@ pub struct Compare {
     /// 显式输入--less时才启用
     #[arg(long)]
     pub less: bool,
+    /// 文本对比方式，只允许`git`/`table`
+    #[arg(long, value_enum, default_value = "git")]
+    pub style: DiffStyle,
 }
 
 #[derive(Args, Debug)]
