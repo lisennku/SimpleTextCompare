@@ -134,7 +134,12 @@
 
 ## 13. 第三方 crate
 
-- **clap(命令行解析)** — `#[derive(Parser/Subcommand/Args)]` 用结构体声明 CLI;`#[arg(short,long,value_parser,action=...)]`、`#[command(subcommand/group/version)]`;`Cli::parse()` · `cli.rs:36`、`cli.rs:77-140`、`main.rs:14` · https://docs.rs/clap (derive 教程:https://docs.rs/clap/latest/clap/_derive/index.html)
+- **clap(命令行解析)** — `#[derive(Parser/Subcommand/Args)]` 用结构体声明 CLI;`#[arg(...)]`/`#[command(...)]` 配属性;`Cli::parse()` 解析 · `cli.rs:36`、`cli.rs:77-140`、`main.rs:14` · https://docs.rs/clap
+  - **`#[arg(...)]` 为啥在 API 索引里搜不到** — 它是过程宏属性、不是普通 item(struct/fn/trait),所以不进 docs.rs 左侧索引;clap 把 derive 属性单放进 `_derive`("Derive Reference")文档模块,开头的下划线让它排序怪、极易被忽略 · 进去看 "Attributes → Arg" 节 · https://docs.rs/clap/latest/clap/_derive/index.html
+  - **`#[arg(...)]` 专属魔法属性** — `id`、`value_parser`、`action`、`help`、`long_help`、`verbatim_doc_comment`、`short`、`long`、`env`、`from_global`、`value_enum`、`skip`、`default_value`、`default_value_t`、`default_values_t`、`default_value_os_t`、`default_values_os_t`
+  - **关键:`clap::Arg` 的任意方法都能当属性用** — 官方原文 "Any `Arg` method can also be used as an attribute";所以"#[arg()] 能填什么"的全量 = 上面魔法属性 + `Arg` 方法列表;`.required()`→`#[arg(required = true)]`、`.num_args()`→`#[arg(num_args = 1..)]`、`.value_name()`→`#[arg(value_name = "FILE")]` · https://docs.rs/clap/latest/clap/struct.Arg.html
+  - **属性语法映射** — 方法收 bool/无参 → 光杆 flag(`.short()`→`#[arg(short)]`);方法收值 → `= 值`(`.default_value("x")`→`#[arg(default_value = "x")]`);多值逗号并列(`#[arg(num_args = 1, value_name = "F")]`)
+  - **配套页 & 版本对齐** — derive 教程 https://docs.rs/clap/latest/clap/_derive/_tutorial/index.html;cookbook(按场景查写法)https://docs.rs/clap/latest/clap/_derive/_cookbook/index.html;把 URL 里 `latest` 换成本项目版本 `4.6.6` 即对齐
 - **serde(序列化框架)** — `#[derive(Serialize, Deserialize)]` 让 AppConfig 能和 TOML 互转 · `config.rs:4`、`config.rs:24` · https://docs.rs/serde
 - **toml(TOML 编解码)** — `to_string_pretty`(存)、`from_str`(读) · `config.rs:113`、`config.rs:127` · https://docs.rs/toml
 - **similar(diff 算法)** — `TextDiff::from_lines` 建差异;`diff.ops()` 拿操作块;`DiffOp` 的 `tag/old_range/new_range`;`old_slice/new_slice` 取文本;`iter_inline_changes` 做行内差异;`DiffTag`(Equal/Delete/Insert/Replace)、`ChangeTag`、`InlineChange` 的 `values()`(返回 `&[(bool,&str)]`,bool 即是否强调) · `compare.rs:40`、`row.rs:32`、`row.rs:83-111`、`row.rs:138-168` · https://docs.rs/similar
@@ -189,7 +194,7 @@
 - 路径与可见性 — https://doc.rust-lang.org/reference/paths.html · https://doc.rust-lang.org/reference/visibility-and-privacy.html
 
 ### E. docs.rs —— 第三方 crate
-- clap(命令行;derive 教程 https://docs.rs/clap/latest/clap/_derive/index.html)— https://docs.rs/clap
+- clap(命令行;Derive 参考/`#[arg]` 属性 https://docs.rs/clap/latest/clap/_derive/index.html;`Arg` 方法=可用属性 https://docs.rs/clap/latest/clap/struct.Arg.html)— https://docs.rs/clap
 - serde(序列化)— https://docs.rs/serde
 - toml(TOML 编解码)— https://docs.rs/toml
 - similar(diff 算法:TextDiff/DiffOp/iter_inline_changes)— https://docs.rs/similar
