@@ -28,9 +28,14 @@
 
 `stc diff left_file right_file [--path file_dir] [-p file_dir]`
 
+- `--path`/`-p`参数说明
+  - 当两个文件在同一路径内，可以使用该参数指定路径，避免`left_file`和`right_file`输入太长
+
 # 终端显示说明
 
 当前版本不会刷新终端显示，会在执行命令后在下方直接显示，或者转移到`less`显式
+
+- `ANSI`颜色渲染会判断是否在终端内，如果重定向则忽略`ANSI`染色
 
 # to-do
 
