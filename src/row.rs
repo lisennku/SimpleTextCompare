@@ -29,15 +29,15 @@
 //!     - 如果启用`--inline`，则将`left_line`/`right_line`均填充值，可能是`None`
 //!     - 如果未启用`--inline`，则按照`Insert`/`Delete`处理
 use crate::line_status::LineStatus;
+use crate::output;
 use similar::{ChangeTag, DiffOp, DiffTag, TextDiff};
 
-pub fn plain_seg(text: &str) -> Vec<(bool, String)> {
-    vec![(
-        false,
-        text.trim_end_matches('\n')
-            .trim_end_matches('\r')
-            .to_string(),
-    )]
+fn plain_seg(text: &str) -> Vec<(bool, String)> {
+    let no_newline_text = text
+        .trim_end_matches('\n')
+        .trim_end_matches('\r')
+        .to_string();
+    vec![(false, output::get_sanitized_string(&no_newline_text))]
 }
 
 #[derive(Debug)]
@@ -146,7 +146,9 @@ fn assemble_op_rows_inline_true(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> {
                         .map(|(b, s)| {
                             (
                                 *b,
-                                s.trim_end_matches('\n').trim_end_matches('\r').to_string(),
+                                output::get_sanitized_string(
+                                    s.trim_end_matches('\n').trim_end_matches('\r'),
+                                ),
                             )
                         })
                         .collect(),
@@ -161,7 +163,9 @@ fn assemble_op_rows_inline_true(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> {
                         .map(|(b, s)| {
                             (
                                 *b,
-                                s.trim_end_matches('\n').trim_end_matches('\r').to_string(),
+                                output::get_sanitized_string(
+                                    s.trim_end_matches('\n').trim_end_matches('\r'),
+                                ),
                             )
                         })
                         .collect(),

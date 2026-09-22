@@ -21,11 +21,39 @@ use crate::row::Row;
 use std::io::{self, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-#[allow(dead_code)]
-const CODE_WIDTH: usize = 10;
-#[allow(dead_code)]
-const NO_WIDTH: usize = 5;
-const STATUS_WIDTH: usize = 6;
+const STATUS_WIDTH: usize = 7;
+
+/// 针对终端控制字符，以十六进制来看，是0x00-0x1F，都是控制字符，其中可能会引起终端转义注入问题
+///
+/// 其中
+///
+/// - `0x09` `TAB`符号，转为空格`' '`
+/// - 其他控制字符 转为`caret`字符
+/// - 正常字符原样返回
+/// - `0x7F` `DEL`符号 转为`^?`
+pub fn terminal_control_convert_to_safety(ch: char) -> String {
+    let ch_u32 = ch as u32;
+    if ch_u32 == 0x09 {
+        " ".to_string()
+    } else if ch_u32 <= 0x1F {
+        format!(
+            "{}{}",
+            '^',
+            char::from_u32(ch_u32 + 0x40).expect("控制字符加0x40必落在合法ASCII区")
+        )
+    } else if ch_u32 == 0x7F {
+        "^?".to_string()
+    } else {
+        ch.to_string()
+    }
+}
+
+/// 负责处理终端转义注入的字符
+pub fn get_sanitized_string(text: &str) -> String {
+    text.chars()
+        .map(terminal_control_convert_to_safety)
+        .collect::<String>()
+}
 
 /// 优化行号处理代码
 /// 抽象为一个函数
@@ -40,7 +68,7 @@ fn format_line_no(index: usize, line_no: Option<usize>) -> String {
 /// - `text` 文本
 /// - `width` 指定宽度
 /// - `left_align` 左对齐
-pub fn padding_white_space(text: &str, width: usize, left_align: bool) -> String {
+fn padding_white_space(text: &str, width: usize, left_align: bool) -> String {
     let occupied_width = UnicodeWidthStr::width(text);
 
     if occupied_width >= width {
@@ -211,6 +239,7 @@ pub fn render_rows(
 
 #[cfg(test)]
 mod tests {
+
     #[test]
     fn test_saturating_minus() {
         let a = 10_usize;

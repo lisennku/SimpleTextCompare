@@ -4,13 +4,20 @@
 
 use crate::ansi_config::{CYAN, GREEN, RED, RESET};
 use crate::output;
-use crate::output::render_rows;
 use crate::row::build_rows;
 use anyhow::{Context, Result};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+
+/// 对文件名进行终端转义注入处理
+fn get_file_name_display_safety(p: &Path, default_name: &str) -> String {
+    p.file_name()
+        .and_then(|name| name.to_str())
+        .map(|name| output::get_sanitized_string(name))
+        .unwrap_or(default_name.to_string())
+}
 
 /// 按照给定的文件，以表格形式输出两个文本之间的差异
 /// - `left`  左文件
@@ -35,33 +42,37 @@ pub fn compare_files_table_style(
     inline: bool,
     color: bool,
 ) -> Result<()> {
-    let left_text =
-        fs::read_to_string(left).with_context(|| format!("打开文件{}出错", left.display()))?;
-    let right_text =
-        fs::read_to_string(right).with_context(|| format!("打开文件{}出错", right.display()))?;
+    let left_file_name = get_file_name_display_safety(left, "<left>");
+    let right_file_name = get_file_name_display_safety(right, "<right>");
+
+    let left_text = fs::read_to_string(left).with_context(|| {
+        format!(
+            "打开文件{}出错",
+            output::get_sanitized_string(&(left.display().to_string()))
+        )
+    })?;
+
+    let right_text = fs::read_to_string(right).with_context(|| {
+        format!(
+            "打开文件{}出错",
+            output::get_sanitized_string(&(right.display().to_string()))
+        )
+    })?;
+
     let diff = TextDiff::from_lines(&left_text, &right_text);
 
-    let left_file_name = left
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("<left>");
-    let right_file_name = right
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("<right>");
-
     output::output_wrapped_header(
-        left_file_name,
-        right_file_name,
+        &left_file_name,
+        &right_file_name,
         code_width,
         no_width,
         writer,
         color,
     )?;
-    output::output_separator_row(code_width * 2 + no_width * 2 + 3 * 4 + 6, writer)?;
+    output::output_separator_row(code_width * 2 + no_width * 2 + 3 * 4 + 7, writer)?;
 
     let rows = build_rows(&diff, inline);
-    render_rows(&rows, code_width, no_width, writer, color)?;
+    output::render_rows(&rows, code_width, no_width, writer, color)?;
 
     Ok(())
 }
@@ -81,20 +92,24 @@ pub fn compare_files_git_style(
     writer: &mut dyn Write,
     color: bool,
 ) -> Result<()> {
-    let left_text =
-        fs::read_to_string(left).with_context(|| format!("打开文件{}出错", left.display()))?;
-    let right_text =
-        fs::read_to_string(right).with_context(|| format!("打开文件{}出错", right.display()))?;
-    let diff = TextDiff::from_lines(&left_text, &right_text);
+    let left_file_name = get_file_name_display_safety(left, "<left>");
+    let right_file_name = get_file_name_display_safety(right, "<right>");
 
-    let left_file_name = left
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("<left>");
-    let right_file_name = right
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("<right>");
+    let left_text = fs::read_to_string(left).with_context(|| {
+        format!(
+            "打开文件{}出错",
+            output::get_sanitized_string(&(left.display().to_string()))
+        )
+    })?;
+
+    let right_text = fs::read_to_string(right).with_context(|| {
+        format!(
+            "打开文件{}出错",
+            output::get_sanitized_string(&(right.display().to_string()))
+        )
+    })?;
+
+    let diff = TextDiff::from_lines(&left_text, &right_text);
 
     let unified_diff = diff.unified_diff();
 
@@ -115,6 +130,8 @@ pub fn compare_files_git_style(
         for change in hunk.iter_changes() {
             let text = change.to_string_lossy();
             let text = text.trim_end_matches('\n').trim_end_matches('\r');
+            // 处理终端转义字符的时机应该放到后面，否则换行的\n和\r会被替换导致所有内容均变为一行
+            let text = output::get_sanitized_string(text);
             match change.tag() {
                 ChangeTag::Equal => {
                     writeln!(writer, " {}", text)?;
