@@ -30,14 +30,23 @@
 //!     - 如果未启用`--inline`，则按照`Insert`/`Delete`处理
 use crate::line_status::LineStatus;
 use crate::output;
+use crate::output::get_sanitized_string;
 use similar::{ChangeTag, DiffOp, DiffTag, TextDiff};
 
+pub const NO_NEWLINE: &str = r"\ No newline at end of file";
+
+/// 功能函数，非`inline`模式时，负责将闭包中的`&str`转为只有一个元素的`Vec`，元组为一个元组
 fn plain_seg(text: &str) -> Vec<(bool, String)> {
-    let no_newline_text = text
-        .trim_end_matches('\n')
-        .trim_end_matches('\r')
-        .to_string();
-    vec![(false, output::get_sanitized_string(&no_newline_text))]
+    let ends_with_newline = text.ends_with(['\n', '\r']);
+
+    let no_newline_text = text.trim_end_matches('\n').to_string();
+    let mut sanitized_text = get_sanitized_string(&no_newline_text);
+
+    if !ends_with_newline {
+        sanitized_text.push_str("\n");
+        sanitized_text.push_str(NO_NEWLINE);
+    }
+    vec![(false, sanitized_text)]
 }
 
 #[derive(Debug)]
@@ -136,41 +145,18 @@ fn assemble_op_rows_inline_true(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> {
     let mut right_segs: Vec<(Option<usize>, Option<Vec<(bool, String)>>)> = Vec::new();
 
     for inline in diff.iter_inline_changes(op) {
+        let mut pieces: Vec<(bool, String)> = inline
+            .values()
+            .iter()
+            .map(|(b, s)| (*b, output::get_sanitized_string(s.trim_end_matches('\n'))))
+            .collect();
+        if inline.missing_newline() {
+            pieces.push((false, "\n".to_string() + NO_NEWLINE))
+        }
+
         match inline.tag() {
-            ChangeTag::Delete => left_segs.push((
-                inline.old_index().map(|i| i + 1),
-                Some(
-                    inline
-                        .values()
-                        .iter()
-                        .map(|(b, s)| {
-                            (
-                                *b,
-                                output::get_sanitized_string(
-                                    s.trim_end_matches('\n').trim_end_matches('\r'),
-                                ),
-                            )
-                        })
-                        .collect(),
-                ),
-            )),
-            ChangeTag::Insert => right_segs.push((
-                inline.new_index().map(|i| i + 1),
-                Some(
-                    inline
-                        .values()
-                        .iter()
-                        .map(|(b, s)| {
-                            (
-                                *b,
-                                output::get_sanitized_string(
-                                    s.trim_end_matches('\n').trim_end_matches('\r'),
-                                ),
-                            )
-                        })
-                        .collect(),
-                ),
-            )),
+            ChangeTag::Delete => left_segs.push((inline.old_index().map(|i| i + 1), Some(pieces))),
+            ChangeTag::Insert => right_segs.push((inline.new_index().map(|i| i + 1), Some(pieces))),
             _ => unreachable!(),
         }
     }

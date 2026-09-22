@@ -125,14 +125,15 @@ pub fn output_separator_row(width: usize, writer: &mut dyn Write) -> io::Result<
 ///
 /// 负责依据指定的代码列宽进行折叠，染色和填充列宽(针对不满足指定列宽的子行)
 ///
-/// 内部使用`Vec<(usize, Vec<(bool, String)>)>`来表示对一行代码的折叠结构
-/// - `(usize, Vec<(bool, String)>)`
+/// 内部使用`Vec<(usize, Vec<(bool, String)>, bool)>`来表示对一行代码的折叠结构
+/// - `(usize, Vec<(bool, String)>, bool)`
 ///     - `usize` 表示当前子行的`unicode`字符长度
 ///     - `Vec<(bool, String)>` 表示当前子行内的着色片段列表
 ///         - `bool`表示是否进行重点着色
 ///         - `String` 表示该片段的文本
+///     - `bool` 表示是否为missing_newline的标记
 ///
-///     - 处理逻辑是每次填充字符时判断当前的`bool`和最后一个元素的`bool`是否相同，相同则直接`append`，不同则开启一个新的元素
+///     - 处理逻辑是每次填充字符时判断当前`Vec`里的`bool`和最后一个元素的`bool`是否相同，相同则直接`append`，不同则开启一个新的元素
 ///         - 原因是要保留行内着色的`bool`
 ///
 /// 收集后进行闭包着色与填充处理
@@ -146,16 +147,27 @@ pub fn format_side(
         return Vec::new();
     };
 
-    let mut result_lines: Vec<(usize, Vec<(bool, String)>)> = Vec::new();
+    let mut result_lines: Vec<(usize, Vec<(bool, String)>, bool)> = Vec::new();
     let mut current_line: Vec<(bool, String)> = Vec::new();
     let mut current_width: usize = 0_usize;
+    // 当前处理元组是否为NEWLINE标记
+    let mut newline_flag: bool = false;
 
     for (is_emphasis, line) in segs {
         let is_emphasis = *is_emphasis;
         for ch in line.chars() {
+            // 进入到这里的\n，只有新行判断增加的\n和NO_NEWLINE
+            // 且missing_newline这个是文件级别的，只会出现在最后的位置，newline_flag不需要重置
+            if ch == '\n' {
+                result_lines.push((current_width, current_line, newline_flag));
+                current_line = Vec::new();
+                current_width = 0;
+                newline_flag = true;
+                continue;
+            }
             let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
             if current_width + ch_width > width {
-                result_lines.push((current_width, current_line));
+                result_lines.push((current_width, current_line, newline_flag));
                 current_line = Vec::new();
                 current_width = 0;
             }
@@ -169,21 +181,25 @@ pub fn format_side(
     }
 
     if !current_line.is_empty() {
-        result_lines.push((current_width, current_line));
+        result_lines.push((current_width, current_line, newline_flag));
     }
 
     if result_lines.is_empty() {
-        result_lines.push((0, Vec::new()));
+        result_lines.push((0, Vec::new(), false));
     }
 
     result_lines
         .into_iter()
-        .map(|(line_width, line_codes)| {
+        .map(|(line_width, line_codes, newline_flag)| {
             let mut line = String::new();
             for (is_emphasis, line_seg) in line_codes {
-                match status.piece_color(color, is_emphasis) {
-                    Some(c) => line.push_str(&format!("{c}{line_seg}{RESET}")),
-                    None => line.push_str(&line_seg),
+                if newline_flag {
+                    line.push_str(&line_seg);
+                } else {
+                    match status.piece_color(color, is_emphasis) {
+                        Some(c) => line.push_str(&format!("{c}{line_seg}{RESET}")),
+                        None => line.push_str(&line_seg),
+                    }
                 }
             }
             let padding_cnts = width.saturating_sub(line_width);

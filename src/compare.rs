@@ -4,7 +4,7 @@
 
 use crate::ansi_config::{CYAN, GREEN, RED, RESET};
 use crate::output;
-use crate::row::build_rows;
+use crate::row::{self, build_rows};
 use anyhow::{Context, Result};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
@@ -129,8 +129,8 @@ pub fn compare_files_git_style(
         }
         for change in hunk.iter_changes() {
             let text = change.to_string_lossy();
-            let text = text.trim_end_matches('\n').trim_end_matches('\r');
-            // 处理终端转义字符的时机应该放到后面，否则换行的\n和\r会被替换导致所有内容均变为一行
+            let text = text.trim_end_matches('\n');
+            // 处理终端转义字符的时机应该放到后面，否则换行的\n会被替换导致所有内容均变为一行
             let text = output::get_sanitized_string(text);
             match change.tag() {
                 ChangeTag::Equal => {
@@ -150,6 +150,9 @@ pub fn compare_files_git_style(
                         writeln!(writer, "-{}", text)?;
                     }
                 }
+            }
+            if change.missing_newline() {
+                writeln!(writer, "{}", row::NO_NEWLINE)?;
             }
         }
     }
