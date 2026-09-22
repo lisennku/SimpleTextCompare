@@ -45,20 +45,12 @@ impl AppConfig {
         }
     }
     pub fn validate(&self) -> Result<()> {
+        // 不再对less path进行校验，放到pager.rs里
         if self.code_width < 40 || self.code_width > 100 {
             bail!("代码列宽度需在40-100之间");
         }
         if self.no_width < 4 || self.no_width > 7 {
             bail!("行号列宽需在4-7")
-        }
-        if let Some(path) = &self.less_path {
-            let Ok(is_exists) = path.try_exists() else {
-                bail!("无法访问文件系统");
-            };
-
-            if !is_exists {
-                bail!("less可执行程序路径不存在")
-            }
         }
         Ok(())
     }
@@ -152,7 +144,6 @@ impl ConfigManager {
         }
 
         let app_config = self.load()?;
-        app_config.validate()?;
 
         Ok(app_config)
     }

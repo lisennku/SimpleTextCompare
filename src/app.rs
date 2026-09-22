@@ -69,6 +69,8 @@ impl cli::Cli {
                 }
             }
             cli::Command::Diff(d) => {
+                // 校验放到此处
+                app_config.validate()?;
                 let (left_file, right_file) = match d.path {
                     Some(p) => (
                         compose_file_name_remove_current_dir(&p, &d.left_file),

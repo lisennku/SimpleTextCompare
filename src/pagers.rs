@@ -4,7 +4,7 @@
 //!
 //! - `Less`变体 表示通过`less`输出
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, bail};
 use std::io::{self, IsTerminal, Write};
 use std::path::PathBuf;
 use std::process::{Child, ChildStdin, Command, Stdio};
@@ -30,8 +30,18 @@ impl Pager {
         if !is_less || !io::stdout().is_terminal() {
             return Ok(Pager::Stdout(io::stdout()));
         }
-
-        let less_path = path.unwrap_or_else(|| PathBuf::from("less"));
+        let less_path = match path {
+            Some(p) => {
+                let Ok(exists) = p.try_exists() else {
+                    bail!("无法访问文件系统");
+                };
+                if !exists {
+                    bail!("less可执行程序路径不存在");
+                }
+                p
+            }
+            None => PathBuf::from("less"),
+        };
 
         let mut child = Command::new(less_path)
             .arg("-FRSX")
