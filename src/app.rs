@@ -3,7 +3,19 @@
 use crate::{cli, compare, config, pagers};
 use anyhow::Result;
 use std::io::{self, ErrorKind, IsTerminal};
+use std::path::{Component, Path, PathBuf};
 
+/// 负责拼接文件基础路径和文件名输入
+///
+/// 处理文件名输入的`./`
+fn compose_file_name_remove_current_dir(base_path: &Path, file_name: &Path) -> PathBuf {
+    let rel = file_name
+        .components()
+        .filter(|c| !matches!(c, Component::CurDir))
+        .collect::<PathBuf>();
+
+    base_path.join(rel)
+}
 impl cli::Cli {
     /// `self` 表示命令行结构体本身
     ///
@@ -58,7 +70,10 @@ impl cli::Cli {
             }
             cli::Command::Diff(d) => {
                 let (left_file, right_file) = match d.path {
-                    Some(p) => (p.join(&d.left_file), p.join(&d.right_file)),
+                    Some(p) => (
+                        compose_file_name_remove_current_dir(&p, &d.left_file),
+                        compose_file_name_remove_current_dir(&p, &d.right_file),
+                    ),
                     None => (d.left_file, d.right_file),
                 };
 
