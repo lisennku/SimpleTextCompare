@@ -1,4 +1,5 @@
 //! 提供用于序列化与反序列化的配置文件结构体`AppConfig`，和管理配置文件的`ConfigManager`
+use crate::bytes_unit::BytesUnit;
 use crate::consts;
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
@@ -111,7 +112,20 @@ impl ConfigManager {
     pub fn list(&self) -> Result<()> {
         let config = self.load()?;
 
-        println!("{:#?}", config);
+        println!("代码列宽 {}", config.code_width);
+        println!("行号列宽 {}", config.no_width);
+
+        let less_path = match config.less_path {
+            Some(p) => p.to_str().unwrap_or("").to_string(),
+            None => "未设置".to_string(),
+        };
+
+        println!("less可执行程序路径 {}", less_path);
+
+        println!("行内显示 {}", if config.inline { "启用" } else { "未启用" });
+
+        let raw_bytes = config.file_limit_bytes;
+        println!("单个文件的大小限制为 {}", BytesUnit::display(raw_bytes));
 
         Ok(())
     }

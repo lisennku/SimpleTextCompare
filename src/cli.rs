@@ -33,8 +33,9 @@
 //! - `--less` 是否启用`less`控制显示
 //! - `--style` 对比样式
 //!
+use crate::bytes_unit::BytesUnit;
 use crate::consts;
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use clap::{self, ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
 
@@ -72,7 +73,17 @@ fn less_path_validate(p: &str) -> Result<PathBuf> {
     Ok(path)
 }
 fn file_limit_bytes_vlaidate(b: &str) -> Result<u64> {
-    let limit = b.parse::<u64>().map_err(|e| anyhow!("{}", e))?;
+    let non_num_first_pos = b
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or_else(|| b.len());
+
+    let digits: String = b.get(0..non_num_first_pos).unwrap_or("0").to_string();
+    let suffixes: String = b.get(non_num_first_pos..).unwrap_or("").to_string();
+
+    let unit =
+        BytesUnit::new(&suffixes).with_context(|| anyhow!("{}不是合法的字节单位", suffixes))?;
+    let limit = unit.multiply(digits.parse::<u64>().map_err(|e| anyhow!("{}", e))?)?;
+
     if limit > consts::FILE_MAX_BYTES {
         bail!("文件大小不可以超过1GiB");
     }
@@ -159,9 +170,25 @@ pub struct Config {
     /// 开启参数，接收0或1个对应值参数，如果为0，则用默认值
     #[arg(long, action = ArgAction::Set, num_args = 0..=1, default_missing_value = "true",require_equals = true)]
     pub inline: Option<bool>,
-    /// 文件大小限制
-    ///
-    /// 不可以超过`1GiB`
-    #[arg(long, value_parser = file_limit_bytes_vlaidate)]
+    #[arg(
+        long,
+        value_name = "SIZE",
+        value_parser = file_limit_bytes_vlaidate,
+        help = "单个文件大小上限，可带 K/M/G 后缀（如 10MiB、1G）",
+        long_help = concat!(
+            "单个文件大小上限，可带 K/M/G 后缀。\n",
+            "\n",
+            "支持“数字+后缀”或纯字节数：10MiB / 500K / 1G / 52428800 均可。\n",
+            "\n",
+            "单位（均为 1024 进制，大小写不敏感）：\n",
+            "    K = KB = KiB = 1024\n",
+            "    M = MB = MiB = 1024^2\n",
+            "    G = GB = GiB = 1024^3\n",
+            "注意：此处 KB/MB/GB 也按 1024 计算，而非 1000。\n",
+            "\n",
+            "只认整数（1.5G 会被拒绝）；数字与后缀之间不能有空格\n",
+            "（10 MiB 会被拒绝，请写 10MiB）。上限不得超过 1GiB。",
+        ),
+    )]
     pub file_limit_bytes: Option<u64>,
 }

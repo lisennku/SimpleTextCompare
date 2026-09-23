@@ -22,7 +22,8 @@
     - `stc conf --inline` 设置为`true`
     - `stc conf --inline=false` 设置为`false`
 - 设置单个文件最大的字节数
-    - `stc conf --file-limit-bytes <N-bytes>`
+    - `stc conf --file-limit-bytes <xx>`
+    - 新增人机友好输入，可以输入`Kib`/`MB`等，但是数字必须是整数
 - 需要注意
     - `--list`/`--init`互斥，但是可以结合另外三个进行设置
         - `--init`结合其他，先初始化后更改
