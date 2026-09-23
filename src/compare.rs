@@ -10,13 +10,39 @@ use similar::{ChangeTag, TextDiff};
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// 对文件名进行终端转义注入处理
-fn get_file_name_display_safety(p: &Path, default_name: &str) -> String {
-    p.file_name()
+///
+/// 新增输出宽度处理，如果文件名整体过长，会进行截取，并将文件名前面部分变成'\u{2026}'
+fn get_file_name_display_safety(p: &Path, default_name: &str, code_width: Option<usize>) -> String {
+    let file_name = p
+        .file_name()
         .and_then(|name| name.to_str())
         .map(|name| output::get_sanitized_string(name))
-        .unwrap_or(default_name.to_string())
+        .unwrap_or(default_name.to_string());
+
+    match code_width {
+        Some(w) => {
+            let file_name_ori_length = UnicodeWidthStr::width(file_name.as_str());
+            if file_name_ori_length > w {
+                let mut l = 0;
+                let mut valid_file_name = String::new();
+                for c in file_name.chars().rev() {
+                    if l + UnicodeWidthChar::width(c).unwrap_or(0) > w - 1 {
+                        valid_file_name.push('\u{2026}');
+                        break;
+                    }
+                    l += UnicodeWidthChar::width(c).unwrap_or(0);
+                    valid_file_name.push(c);
+                }
+                valid_file_name.chars().rev().collect::<String>()
+            } else {
+                file_name
+            }
+        }
+        None => file_name,
+    }
 }
 
 /// 按照给定的文件，以表格形式输出两个文本之间的差异
@@ -42,8 +68,8 @@ pub fn compare_files_table_style(
     inline: bool,
     color: bool,
 ) -> Result<()> {
-    let left_file_name = get_file_name_display_safety(left, "<left>");
-    let right_file_name = get_file_name_display_safety(right, "<right>");
+    let left_file_name = get_file_name_display_safety(left, "<left>", Some(code_width));
+    let right_file_name = get_file_name_display_safety(right, "<right>", Some(code_width));
 
     let left_text = fs::read_to_string(left).with_context(|| {
         format!(
@@ -61,18 +87,22 @@ pub fn compare_files_table_style(
 
     let diff = TextDiff::from_lines(&left_text, &right_text);
 
+    // 计算合法行号宽度
+    let max_lines = left_text.lines().count().max(right_text.lines().count());
+    let valid_line_no_width = no_width.max(max_lines.to_string().len());
+
     output::output_wrapped_header(
         &left_file_name,
         &right_file_name,
         code_width,
-        no_width,
+        valid_line_no_width,
         writer,
         color,
     )?;
-    output::output_separator_row(code_width * 2 + no_width * 2 + 3 * 4 + 7, writer)?;
+    output::output_separator_row(code_width * 2 + valid_line_no_width * 2 + 3 * 4 + 7, writer)?;
 
     let rows = build_rows(&diff, inline);
-    output::render_rows(&rows, code_width, no_width, writer, color)?;
+    output::render_rows(&rows, code_width, valid_line_no_width, writer, color)?;
 
     Ok(())
 }
@@ -92,8 +122,8 @@ pub fn compare_files_git_style(
     writer: &mut dyn Write,
     color: bool,
 ) -> Result<()> {
-    let left_file_name = get_file_name_display_safety(left, "<left>");
-    let right_file_name = get_file_name_display_safety(right, "<right>");
+    let left_file_name = get_file_name_display_safety(left, "<left>", None);
+    let right_file_name = get_file_name_display_safety(right, "<right>", None);
 
     let left_text = fs::read_to_string(left).with_context(|| {
         format!(
@@ -221,5 +251,12 @@ mod tests {
 
         compare_files_table_style(&left, &right, 70, 3, &mut w, false, true)?;
         Ok(())
+    }
+
+    #[test]
+    fn string_manipulation() {
+        let s = Path::new("哈利波特第一部魔法石");
+        let f = get_file_name_display_safety(s, "xx", Some(10));
+        println!("{}", f);
     }
 }
