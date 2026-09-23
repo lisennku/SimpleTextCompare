@@ -5,6 +5,7 @@ mod app;
 mod cli;
 mod compare;
 mod config;
+mod consts;
 mod line_status;
 mod output;
 mod pagers;

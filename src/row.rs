@@ -28,23 +28,21 @@
 //! - 针对`Replace`类型
 //!     - 如果启用`--inline`，则将`left_line`/`right_line`均填充值，可能是`None`
 //!     - 如果未启用`--inline`，则按照`Insert`/`Delete`处理
+use crate::consts;
 use crate::line_status::LineStatus;
 use crate::output;
-use crate::output::get_sanitized_string;
 use similar::{ChangeTag, DiffOp, DiffTag, TextDiff};
-
-pub const NO_NEWLINE: &str = r"\ No newline at end of file";
 
 /// 功能函数，非`inline`模式时，负责将闭包中的`&str`转为只有一个元素的`Vec`，元组为一个元组
 fn plain_seg(text: &str) -> Vec<(bool, String)> {
     let ends_with_newline = text.ends_with(['\n', '\r']);
 
     let no_newline_text = text.trim_end_matches('\n').to_string();
-    let mut sanitized_text = get_sanitized_string(&no_newline_text);
+    let mut sanitized_text = output::get_sanitized_string(&no_newline_text);
 
     if !ends_with_newline {
         sanitized_text.push_str("\n");
-        sanitized_text.push_str(NO_NEWLINE);
+        sanitized_text.push_str(consts::NO_NEWLINE);
     }
     vec![(false, sanitized_text)]
 }
@@ -151,7 +149,7 @@ fn assemble_op_rows_inline_true(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> {
             .map(|(b, s)| (*b, output::get_sanitized_string(s.trim_end_matches('\n'))))
             .collect();
         if inline.missing_newline() {
-            pieces.push((false, "\n".to_string() + NO_NEWLINE))
+            pieces.push((false, "\n".to_string() + consts::NO_NEWLINE))
         }
 
         match inline.tag() {

@@ -33,6 +33,7 @@
 //! - `--less` 是否启用`less`控制显示
 //! - `--style` 对比样式
 //!
+use crate::consts;
 use anyhow::{Result, anyhow, bail};
 use clap::{self, ArgAction, ArgGroup, Args, Parser, Subcommand, ValueEnum};
 use std::path::PathBuf;
@@ -69,6 +70,13 @@ fn less_path_validate(p: &str) -> Result<PathBuf> {
     };
 
     Ok(path)
+}
+fn file_limit_bytes_vlaidate(b: &str) -> Result<u64> {
+    let limit = b.parse::<u64>().map_err(|e| anyhow!("{}", e))?;
+    if limit > consts::FILE_MAX_BYTES {
+        bail!("文件大小不可以超过1GiB");
+    }
+    Ok(limit)
 }
 
 /// 用于`Diff`的`style`变体的枚举
@@ -151,4 +159,9 @@ pub struct Config {
     /// 开启参数，接收0或1个对应值参数，如果为0，则用默认值
     #[arg(long, action = ArgAction::Set, num_args = 0..=1, default_missing_value = "true",require_equals = true)]
     pub inline: Option<bool>,
+    /// 文件大小限制
+    ///
+    /// 不可以超过`1GiB`
+    #[arg(long, value_parser = file_limit_bytes_vlaidate)]
+    pub file_limit_bytes: Option<u64>,
 }

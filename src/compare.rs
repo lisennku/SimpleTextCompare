@@ -3,9 +3,9 @@
 //! 1. 按照文本对照形式输出差异
 
 use crate::ansi_config::{CYAN, GREEN, RED, RESET};
-use crate::output;
-use crate::row::{self, build_rows};
-use anyhow::{Context, Result};
+use crate::row::build_rows;
+use crate::{consts, output};
+use anyhow::{Context, Result, bail};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
 use std::io::Write;
@@ -45,6 +45,29 @@ fn get_file_name_display_safety(p: &Path, default_name: &str, code_width: Option
     }
 }
 
+/// 读取文件内容
+///
+/// 检查文件是否超过限定，再进行读取
+fn read_file_to_string_with_bytes_limits(file: &Path, file_limit_bytes: u64) -> Result<String> {
+    let file_meta_bytes = fs::metadata(file)
+        .with_context(|| "无法获取指定文件的系统信息")?
+        .len();
+
+    if file_meta_bytes <= file_limit_bytes {
+        let text = fs::read_to_string(file).with_context(|| {
+            format!(
+                "打开文件{}出错",
+                output::get_sanitized_string(&(file.display().to_string()))
+            )
+        })?;
+        Ok(text)
+    } else {
+        bail!(
+            "指定文件的{file_meta_bytes}字节超过指定的{file_limit_bytes}字节\n请使用stc conf --file-limit-bytes N 调大参数\n请注意，不能超过1GiB"
+        )
+    }
+}
+
 /// 按照给定的文件，以表格形式输出两个文本之间的差异
 /// - `left`  左文件
 /// - `right` 右文件
@@ -67,23 +90,14 @@ pub fn compare_files_table_style(
     writer: &mut dyn Write,
     inline: bool,
     color: bool,
+    file_limit_bytes: u64,
 ) -> Result<()> {
     let left_file_name = get_file_name_display_safety(left, "<left>", Some(code_width));
     let right_file_name = get_file_name_display_safety(right, "<right>", Some(code_width));
 
-    let left_text = fs::read_to_string(left).with_context(|| {
-        format!(
-            "打开文件{}出错",
-            output::get_sanitized_string(&(left.display().to_string()))
-        )
-    })?;
+    let left_text = read_file_to_string_with_bytes_limits(left, file_limit_bytes)?;
 
-    let right_text = fs::read_to_string(right).with_context(|| {
-        format!(
-            "打开文件{}出错",
-            output::get_sanitized_string(&(right.display().to_string()))
-        )
-    })?;
+    let right_text = read_file_to_string_with_bytes_limits(right, file_limit_bytes)?;
 
     let diff = TextDiff::from_lines(&left_text, &right_text);
 
@@ -121,23 +135,14 @@ pub fn compare_files_git_style(
     right: &Path,
     writer: &mut dyn Write,
     color: bool,
+    file_limit_bytes: u64,
 ) -> Result<()> {
     let left_file_name = get_file_name_display_safety(left, "<left>", None);
     let right_file_name = get_file_name_display_safety(right, "<right>", None);
 
-    let left_text = fs::read_to_string(left).with_context(|| {
-        format!(
-            "打开文件{}出错",
-            output::get_sanitized_string(&(left.display().to_string()))
-        )
-    })?;
+    let left_text = read_file_to_string_with_bytes_limits(left, file_limit_bytes)?;
 
-    let right_text = fs::read_to_string(right).with_context(|| {
-        format!(
-            "打开文件{}出错",
-            output::get_sanitized_string(&(right.display().to_string()))
-        )
-    })?;
+    let right_text = read_file_to_string_with_bytes_limits(right, file_limit_bytes)?;
 
     let diff = TextDiff::from_lines(&left_text, &right_text);
 
@@ -182,7 +187,7 @@ pub fn compare_files_git_style(
                 }
             }
             if change.missing_newline() {
-                writeln!(writer, "{}", row::NO_NEWLINE)?;
+                writeln!(writer, "{}", consts::NO_NEWLINE)?;
             }
         }
     }
@@ -213,7 +218,7 @@ mod tests {
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\comp.txt",
         );
         let mut w = std::io::stdout();
-        compare_files_table_style(&p1, &p2, 50, 3, &mut w, false, true)?;
+        compare_files_table_style(&p1, &p2, 50, 3, &mut w, false, true, 50 * 1024 * 1024)?;
         Ok(())
     }
 
@@ -225,7 +230,7 @@ mod tests {
 
         let mut w = std::io::stdout();
 
-        compare_files_git_style(&left, &right, &mut w, true)?;
+        compare_files_git_style(&left, &right, &mut w, true, 50 * 1024 * 1024)?;
 
         Ok(())
     }
@@ -237,7 +242,7 @@ mod tests {
 
         let mut w = std::io::stdout();
 
-        compare_files_git_style(&left, &right, &mut w, false)?;
+        compare_files_git_style(&left, &right, &mut w, false, 50 * 1024 * 1024)?;
 
         Ok(())
     }
@@ -249,7 +254,7 @@ mod tests {
 
         let mut w = std::io::stdout();
 
-        compare_files_table_style(&left, &right, 70, 3, &mut w, false, true)?;
+        compare_files_table_style(&left, &right, 70, 3, &mut w, false, true, 50 * 1024 * 1024)?;
         Ok(())
     }
 

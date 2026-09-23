@@ -1,14 +1,10 @@
 //! 提供用于序列化与反序列化的配置文件结构体`AppConfig`，和管理配置文件的`ConfigManager`
+use crate::consts;
 use anyhow::{Context, Result, anyhow, bail};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
-
-/// 指定配置文件名
-const CONFIG_FILE_NAME: &str = r"stc.toml";
-/// 指定存放配置文件的目录名
-const CONFIG_FOLDER_NAME: &str = "stc_conf";
 
 /// # `AppConfig`
 /// ## 字段
@@ -16,17 +12,19 @@ const CONFIG_FOLDER_NAME: &str = "stc_conf";
 /// - `no_width` 行号列宽
 /// - `less_path` `less`可执行程序的位置
 /// - `inline` 是否启用行内对比
+/// - `file_limit_bytes` 单个文件最大的字节数 用于大文件内存保护，防止`OOM`
 /// ## 方法
 /// - `new` 根据传入的参数返回一个`AppConfig`对象
 /// - `validate` 校验配置项是否合法
 /// ## `Default trait`
-/// 实现了`default`函数，默认以`50_usize`/`4_usize`/`None`/`false`传入
+/// 实现了`default`函数，默认以`50_usize`/`4_usize`/`None`/`false`/`1GiB`传入
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AppConfig {
     pub code_width: usize,
     pub no_width: usize,
     pub less_path: Option<PathBuf>,
     pub inline: bool,
+    pub file_limit_bytes: u64,
 }
 
 impl AppConfig {
@@ -36,12 +34,14 @@ impl AppConfig {
         no_width: usize,
         less_path: Option<PathBuf>,
         inline: bool,
+        file_limit_bytes: u64,
     ) -> Self {
         Self {
             code_width,
             no_width,
             less_path,
             inline,
+            file_limit_bytes,
         }
     }
     pub fn validate(&self) -> Result<()> {
@@ -52,10 +52,24 @@ impl AppConfig {
         if self.no_width < 4 || self.no_width > 7 {
             bail!("行号列宽需在4-7")
         }
+        if self.file_limit_bytes > consts::FILE_MAX_BYTES {
+            bail!("单个文件最大不得超过1GiB")
+        }
         Ok(())
     }
 }
 
+/// 为配置对象生成默认的配置
+///
+/// 代码列宽`50_usize`
+///
+/// 行号列宽`4_usize`
+///
+/// `less`可执行程序地址为`None`
+///
+/// 不启用行内对比
+///
+/// 文件限制`50MiB`
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -63,6 +77,7 @@ impl Default for AppConfig {
             no_width: 4_usize,
             less_path: None,
             inline: false,
+            file_limit_bytes: 50 * 1024 * 1024,
         }
     }
 }
@@ -153,46 +168,11 @@ impl ConfigManager {
 pub fn get_config_dir() -> Result<PathBuf> {
     let home_dir = env::home_dir();
     let config_dir = home_dir
-        .map(|d| d.join(CONFIG_FOLDER_NAME).join(CONFIG_FILE_NAME))
+        .map(|d| {
+            d.join(consts::CONFIG_FOLDER_NAME)
+                .join(consts::CONFIG_FILE_NAME)
+        })
         .ok_or(anyhow!("无法找到用户目录"))?;
 
     Ok(config_dir)
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[test]
-//     fn test_config_get_config_dir() {
-//         println!("{}", get_config_dir().unwrap().display());
-//     }
-//
-//     #[test]
-//     fn test_config_new_app_config() {
-//         let p = AppConfig::new(5, 4, Some(PathBuf::new()));
-//         println!("{:?}", p.code_width);
-//         println!("{:?}", p.no_width);
-//         println!("{:?}", p.less_path.unwrap().display());
-//     }
-//
-//     #[test]
-//     fn test_config_store() {
-//         let conf_manage = ConfigManager::new(get_config_dir().unwrap().into());
-//         conf_manage.init().unwrap();
-//     }
-//
-//     // #[test]
-//     // fn test_config_remove() {
-//     //     let conf_manage = ConfigManager::new(get_config_dir().unwrap().into());
-//     //     conf_manage.init().unwrap();
-//     //     conf_manage.remove().unwrap();
-//     // }
-//
-//     #[test]
-//     fn test_config_load() {
-//         let conf_manage = ConfigManager::new(get_config_dir().unwrap().into());
-//         conf_manage.init().unwrap();
-//         conf_manage.load().unwrap();
-//     }
-// }

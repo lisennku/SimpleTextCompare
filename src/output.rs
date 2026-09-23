@@ -16,12 +16,11 @@
 //!
 
 use crate::ansi_config::RESET;
+use crate::consts;
 use crate::line_status::LineStatus;
 use crate::row::Row;
 use std::io::{self, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
-
-const STATUS_WIDTH: usize = 7;
 
 /// 针对终端控制字符，以十六进制来看，是0x00-0x1F，都是控制字符，其中可能会引起终端转义注入问题
 ///
@@ -109,7 +108,7 @@ pub fn output_wrapped_header(
         &left_file,
         padding_white_space("行号", no_width, true),
         &right_file,
-        padding_white_space("状态", STATUS_WIDTH, true),
+        padding_white_space("状态", consts::STATUS_WIDTH, true),
     )?;
 
     Ok(())
@@ -245,7 +244,7 @@ pub fn render_rows(
                 left_seg,
                 padding_white_space(&right_no, no_width, false,),
                 right_seg,
-                padding_white_space(status_text, STATUS_WIDTH, true,)
+                padding_white_space(status_text, consts::STATUS_WIDTH, true,)
             )?;
         }
     }

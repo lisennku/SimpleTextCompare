@@ -60,6 +60,11 @@ impl cli::Cli {
                     changed = true;
                 }
 
+                if let Some(file_limit_bytes) = c.file_limit_bytes {
+                    app_config.file_limit_bytes = file_limit_bytes;
+                    changed = true;
+                }
+
                 if changed {
                     manager.save(&app_config)?;
                 }
@@ -86,12 +91,15 @@ impl cli::Cli {
                 // 判断是否重定向
                 let use_color = io::stdout().is_terminal();
 
+                let file_limits = app_config.file_limit_bytes;
+
                 let res = match d.style {
                     cli::DiffStyle::Git => compare::compare_files_git_style(
                         &left_file,
                         &right_file,
                         p.writer(),
                         use_color,
+                        file_limits,
                     ),
                     cli::DiffStyle::Table => compare::compare_files_table_style(
                         &left_file,
@@ -101,6 +109,7 @@ impl cli::Cli {
                         p.writer(),
                         enable_inline,
                         use_color,
+                        file_limits,
                     ),
                 };
 

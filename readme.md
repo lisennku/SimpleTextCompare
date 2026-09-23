@@ -7,20 +7,22 @@
 在使用程序之前，需要先进行初始化，生成配置文件后，才可以继续使用
 `stc conf --init`
 
-- 注意，如果配置文件损坏需要重新初始化
+- 注意，如果配置文件损坏可以在进行`diff`前重新设置
 
 ## 配置
 
 - 获取配置
     - `stc conf --list`
 - 设置列宽
-    - `stc conf --code-width xx` 代码列宽
-    - `stc conf --no-width xx` 行号列宽
+    - `stc conf --code-width <xx>` 代码列宽
+    - `stc conf --no-width <xx>` 行号列宽
 - 设置`less`路径
-    - `stc conf --less-path xx`
+    - `stc conf --less-path <xx>`
 - 设置`inline` 是否启用行内对比
     - `stc conf --inline` 设置为`true`
     - `stc conf --inline=false` 设置为`false`
+- 设置单个文件最大的字节数
+    - `stc conf --file-limit-bytes <N-bytes>`
 - 需要注意
     - `--list`/`--init`互斥，但是可以结合另外三个进行设置
         - `--init`结合其他，先初始化后更改
@@ -52,6 +54,7 @@
 - [x] 颜色标记
 - [x] 行内对比
 - [x] 增加类`git diff`输出
+- [ ] 增加文件大小约束，防止直接`OOM`
 - [ ] 新增终端显示
 
 # related crates
