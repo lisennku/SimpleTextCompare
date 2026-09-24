@@ -16,16 +16,12 @@
 //!
 
 use crate::ansi_config::RESET;
+use crate::common::Segment;
 use crate::consts;
 use crate::line_status::LineStatus;
 use crate::row::Row;
 use std::io::{self, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
-
-/// `Segment`表示一行代码中的一个片段
-/// - `bool` 表示该片段在`inline`模式下，是否要标记颜色
-/// - `String` 代码片段字符串
-type Segment = (bool, String);
 
 /// `format_side`函数用到的数据结构
 ///
@@ -50,38 +46,6 @@ impl FormattedLine {
             newline_flag,
         }
     }
-}
-
-/// 针对终端控制字符，以十六进制来看，是0x00-0x1F，都是控制字符，其中可能会引起终端转义注入问题
-///
-/// 其中
-///
-/// - `0x09` `TAB`符号，转为空格`' '`
-/// - 其他控制字符 转为`caret`字符
-/// - 正常字符原样返回
-/// - `0x7F` `DEL`符号 转为`^?`
-pub fn terminal_control_convert_to_safety(ch: char) -> String {
-    let ch_u32 = ch as u32;
-    if ch_u32 == 0x09 {
-        " ".to_string()
-    } else if ch_u32 <= 0x1F {
-        format!(
-            "{}{}",
-            '^',
-            char::from_u32(ch_u32 + 0x40).expect("控制字符加0x40必落在合法ASCII区")
-        )
-    } else if ch_u32 == 0x7F {
-        "^?".to_string()
-    } else {
-        ch.to_string()
-    }
-}
-
-/// 负责处理终端转义注入的字符
-pub fn get_sanitized_string(text: &str) -> String {
-    text.chars()
-        .map(terminal_control_convert_to_safety)
-        .collect::<String>()
 }
 
 /// 优化行号处理代码
@@ -182,9 +146,9 @@ pub fn format_side(
     // 当前处理FormattedLine是否为NEWLINE标记
     let mut newline_flag: bool = false;
 
-    for (is_emphasis, line) in segs {
-        let is_emphasis = *is_emphasis;
-        for ch in line.chars() {
+    for seg in segs {
+        let is_emphasis = seg.emphasis;
+        for ch in seg.seg_text.chars() {
             // 进入到这里的\n，只有新行判断增加的\n和NO_NEWLINE
             // 且missing_newline这个是文件级别的，只会出现在最后的位置，newline_flag不需要重置
             if ch == '\n' {
@@ -208,10 +172,10 @@ pub fn format_side(
                 current_line = Vec::new();
                 current_width = 0;
             }
-            if current_line.last().map(|(b, _)| *b) == Some(is_emphasis) {
-                current_line.last_mut().unwrap().1.push(ch);
+            if current_line.last().map(|last_seg| last_seg.emphasis) == Some(is_emphasis) {
+                current_line.last_mut().unwrap().seg_text.push(ch);
             } else {
-                current_line.push((is_emphasis, ch.to_string()));
+                current_line.push(Segment::new(is_emphasis, String::from(ch)));
             }
             current_width += ch_width;
         }
@@ -233,13 +197,13 @@ pub fn format_side(
         .into_iter()
         .map(|fmt_line| {
             let mut line = String::new();
-            for (is_emphasis, line_seg) in fmt_line.line_segs {
+            for seg in fmt_line.line_segs {
                 if fmt_line.newline_flag {
-                    line.push_str(&line_seg);
+                    line.push_str(&seg.seg_text);
                 } else {
-                    match status.piece_color(color, is_emphasis) {
-                        Some(c) => line.push_str(&format!("{c}{line_seg}{RESET}")),
-                        None => line.push_str(&line_seg),
+                    match status.piece_color(color, seg.emphasis) {
+                        Some(c) => line.push_str(&format!("{c}{}{RESET}", seg.seg_text)),
+                        None => line.push_str(&seg.seg_text),
                     }
                 }
             }
@@ -313,7 +277,7 @@ mod tests {
     #[test]
     fn format_side_colors_content_but_not_missing_newline_marker() {
         // plain_seg 对“无尾换行行”的产出：单个 Segment 内嵌 \n + marker
-        let segs = vec![(false, format!("beta\n{}", consts::NO_NEWLINE))];
+        let segs = vec![Segment::new(false, format!("beta\n{}", consts::NO_NEWLINE))];
 
         // width=50 保证不折行（"beta"=4、marker=27 均 <50）；Insert→绿色；color=true
         let out = format_side(Some(&segs), 50, LineStatus::Insert, true);

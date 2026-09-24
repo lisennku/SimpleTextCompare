@@ -4,6 +4,7 @@ mod ansi_config;
 mod app;
 mod bytes_unit;
 mod cli;
+mod common;
 mod compare;
 mod config;
 mod consts;

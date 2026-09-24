@@ -4,15 +4,15 @@
 //! struct Row {
 //!     pub left_no:  Option<usize>,
 //!     pub right_no: Option<usize>,
-//!     pub left_line:     Option<Vec<(bool, String)>>,
-//!     pub right_line:    Option<Vec<(bool, String)>>,
+//!     pub left_line:     Option<Vec<Segment>>,
+//!     pub right_line:    Option<Vec<Segment>>,
 //!     pub status:   LineStatus,
 //! }
 //! ```
 //! 结构体`Row`中，存储`TextDiff`中 每个`op`块里**每一行**的数据
 //!
-//! `*_line`是一个`Option<Vec>`，其内部容器的组成，是`(bool, String)`元组
-//! - 针对`Equal`/`Insert`/`Delete`来说，bool都是false，表示不需要内部染色，且容器只有一个元素
+//! `*_line`是一个`Option<Vec>`，其内部容器的组成，是Segment-> emphasis， seg_text
+//! - 针对`Equal`/`Insert`/`Delete`来说，emphasis都是false，表示不需要内部染色，且容器只有一个元素
 //! - 针对`Replace`，
 //!     - 如果未启用`--inline`，则和`Insert`/`Delete`存储内容类型一致
 //!     - 如果启用`--inline`，元组的取值来自`TextDiff.iter_inline_changes(op)`的`values()`，容器内可能有多个元素
@@ -28,31 +28,31 @@
 //! - 针对`Replace`类型
 //!     - 如果启用`--inline`，则将`left_line`/`right_line`均填充值，可能是`None`
 //!     - 如果未启用`--inline`，则按照`Insert`/`Delete`处理
+use crate::common::{self, Segment};
 use crate::consts;
 use crate::line_status::LineStatus;
-use crate::output;
 use similar::{ChangeTag, DiffOp, DiffTag, TextDiff};
 
-/// 功能函数，非`inline`模式时，负责将闭包中的`&str`转为只有一个元素的`Vec`，元组为一个元组
-fn plain_seg(text: &str) -> Vec<(bool, String)> {
+/// 功能函数，非`inline`模式时，负责将闭包中的`&str`转为只有一个元素的`Vec`，元素为Segment
+fn plain_seg(text: &str) -> Vec<Segment> {
     let ends_with_newline = text.ends_with(['\n', '\r']);
 
     let no_newline_text = text.trim_end_matches('\n').to_string();
-    let mut sanitized_text = output::get_sanitized_string(&no_newline_text);
+    let mut sanitized_text = common::get_sanitized_string(&no_newline_text);
 
     if !ends_with_newline {
         sanitized_text.push_str("\n");
         sanitized_text.push_str(consts::NO_NEWLINE);
     }
-    vec![(false, sanitized_text)]
+    vec![Segment::new(false, sanitized_text)]
 }
 
 #[derive(Debug)]
 pub struct Row {
     pub left_no: Option<usize>,
     pub right_no: Option<usize>,
-    pub left_line: Option<Vec<(bool, String)>>,
-    pub right_line: Option<Vec<(bool, String)>>,
+    pub left_line: Option<Vec<Segment>>,
+    pub right_line: Option<Vec<Segment>>,
     pub status: LineStatus,
 }
 
@@ -60,8 +60,8 @@ impl Row {
     pub fn new(
         left_no: Option<usize>,
         right_no: Option<usize>,
-        left_line: Option<Vec<(bool, String)>>,
-        right_line: Option<Vec<(bool, String)>>,
+        left_line: Option<Vec<Segment>>,
+        right_line: Option<Vec<Segment>>,
         status: LineStatus,
     ) -> Row {
         Row {
@@ -139,17 +139,17 @@ fn assemble_op_rows_inline_false(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> 
 ///
 fn assemble_op_rows_inline_true(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> {
     let mut sub_rows: Vec<Row> = Vec::new();
-    let mut left_segs: Vec<(Option<usize>, Option<Vec<(bool, String)>>)> = Vec::new();
-    let mut right_segs: Vec<(Option<usize>, Option<Vec<(bool, String)>>)> = Vec::new();
+    let mut left_segs: Vec<(Option<usize>, Option<Vec<Segment>>)> = Vec::new();
+    let mut right_segs: Vec<(Option<usize>, Option<Vec<Segment>>)> = Vec::new();
 
     for inline in diff.iter_inline_changes(op) {
-        let mut pieces: Vec<(bool, String)> = inline
+        let mut pieces: Vec<Segment> = inline
             .values()
             .iter()
-            .map(|(b, s)| (*b, output::get_sanitized_string(s.trim_end_matches('\n'))))
+            .map(|(b, s)| Segment::new(*b, common::get_sanitized_string(s.trim_end_matches('\n'))))
             .collect();
         if inline.missing_newline() {
-            pieces.push((false, "\n".to_string() + consts::NO_NEWLINE))
+            pieces.push(Segment::new(false, "\n".to_string() + consts::NO_NEWLINE))
         }
 
         match inline.tag() {

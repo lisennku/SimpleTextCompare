@@ -4,7 +4,7 @@
 
 use crate::ansi_config::{CYAN, GREEN, RED, RESET};
 use crate::row::build_rows;
-use crate::{consts, output};
+use crate::{common, consts, output};
 use anyhow::{Context, Result, bail};
 use similar::{ChangeTag, TextDiff};
 use std::fs;
@@ -19,7 +19,7 @@ fn get_file_name_display_safety(p: &Path, default_name: &str, code_width: Option
     let file_name = p
         .file_name()
         .and_then(|name| name.to_str())
-        .map(|name| output::get_sanitized_string(name))
+        .map(|name| common::get_sanitized_string(name))
         .unwrap_or(default_name.to_string());
 
     match code_width {
@@ -57,7 +57,7 @@ fn read_file_to_string_with_bytes_limits(file: &Path, file_limit_bytes: u64) -> 
         let text = fs::read_to_string(file).with_context(|| {
             format!(
                 "打开文件{}出错",
-                output::get_sanitized_string(&(file.display().to_string()))
+                common::get_sanitized_string(&(file.display().to_string()))
             )
         })?;
         Ok(text)
@@ -166,7 +166,7 @@ pub fn compare_files_git_style(
             let text = change.to_string_lossy();
             let text = text.trim_end_matches('\n');
             // 处理终端转义字符的时机应该放到后面，否则换行的\n会被替换导致所有内容均变为一行
-            let text = output::get_sanitized_string(text);
+            let text = common::get_sanitized_string(text);
             match change.tag() {
                 ChangeTag::Equal => {
                     writeln!(writer, " {}", text)?;
