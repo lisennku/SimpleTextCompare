@@ -22,6 +22,36 @@ use crate::row::Row;
 use std::io::{self, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+/// `Segment`表示一行代码中的一个片段
+/// - `bool` 表示该片段在`inline`模式下，是否要标记颜色
+/// - `String` 代码片段字符串
+type Segment = (bool, String);
+
+/// `format_side`函数用到的数据结构
+///
+/// 主要表示一行代码中，按照指定宽度进行折叠后的子行数据对象
+///
+/// - `line_seg_width` 表示当前子行的`unicode`字符长度
+/// - `line_segs` 表示当前子行内的着色片段列表
+///     - `bool`表示是否进行重点着色
+///     - `String` 表示该片段的文本
+/// - `newline_flag` 表示是否为missing_newline的标记
+struct FormattedLine {
+    line_seg_width: usize,
+    line_segs: Vec<Segment>,
+    newline_flag: bool,
+}
+
+impl FormattedLine {
+    fn new(line_seg_width: usize, line_segs: Vec<Segment>, newline_flag: bool) -> Self {
+        Self {
+            line_seg_width,
+            line_segs,
+            newline_flag,
+        }
+    }
+}
+
 /// 针对终端控制字符，以十六进制来看，是0x00-0x1F，都是控制字符，其中可能会引起终端转义注入问题
 ///
 /// 其中
@@ -124,10 +154,10 @@ pub fn output_separator_row(width: usize, writer: &mut dyn Write) -> io::Result<
 ///
 /// 负责依据指定的代码列宽进行折叠，染色和填充列宽(针对不满足指定列宽的子行)
 ///
-/// 内部使用`Vec<(usize, Vec<(bool, String)>, bool)>`来表示对一行代码的折叠结构
-/// - `(usize, Vec<(bool, String)>, bool)`
+/// 内部使用`Vec<FormattedLine>`来表示对一行代码的折叠结构
+/// - `(usize, Vec<Segment>, bool)`
 ///     - `usize` 表示当前子行的`unicode`字符长度
-///     - `Vec<(bool, String)>` 表示当前子行内的着色片段列表
+///     - `Vec<Segment>` 表示当前子行内的着色片段列表
 ///         - `bool`表示是否进行重点着色
 ///         - `String` 表示该片段的文本
 ///     - `bool` 表示是否为missing_newline的标记
@@ -137,7 +167,7 @@ pub fn output_separator_row(width: usize, writer: &mut dyn Write) -> io::Result<
 ///
 /// 收集后进行闭包着色与填充处理
 pub fn format_side(
-    segs: Option<&[(bool, String)]>,
+    segs: Option<&[Segment]>,
     width: usize,
     status: LineStatus,
     color: bool,
@@ -146,10 +176,10 @@ pub fn format_side(
         return Vec::new();
     };
 
-    let mut result_lines: Vec<(usize, Vec<(bool, String)>, bool)> = Vec::new();
-    let mut current_line: Vec<(bool, String)> = Vec::new();
+    let mut result_lines: Vec<FormattedLine> = Vec::new();
+    let mut current_line: Vec<Segment> = Vec::new();
     let mut current_width: usize = 0_usize;
-    // 当前处理元组是否为NEWLINE标记
+    // 当前处理FormattedLine是否为NEWLINE标记
     let mut newline_flag: bool = false;
 
     for (is_emphasis, line) in segs {
@@ -158,7 +188,11 @@ pub fn format_side(
             // 进入到这里的\n，只有新行判断增加的\n和NO_NEWLINE
             // 且missing_newline这个是文件级别的，只会出现在最后的位置，newline_flag不需要重置
             if ch == '\n' {
-                result_lines.push((current_width, current_line, newline_flag));
+                result_lines.push(FormattedLine::new(
+                    current_width,
+                    current_line,
+                    newline_flag,
+                ));
                 current_line = Vec::new();
                 current_width = 0;
                 newline_flag = true;
@@ -166,7 +200,11 @@ pub fn format_side(
             }
             let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
             if current_width + ch_width > width {
-                result_lines.push((current_width, current_line, newline_flag));
+                result_lines.push(FormattedLine::new(
+                    current_width,
+                    current_line,
+                    newline_flag,
+                ));
                 current_line = Vec::new();
                 current_width = 0;
             }
@@ -180,19 +218,23 @@ pub fn format_side(
     }
 
     if !current_line.is_empty() {
-        result_lines.push((current_width, current_line, newline_flag));
+        result_lines.push(FormattedLine::new(
+            current_width,
+            current_line,
+            newline_flag,
+        ));
     }
 
     if result_lines.is_empty() {
-        result_lines.push((0, Vec::new(), false));
+        result_lines.push(FormattedLine::new(0, Vec::new(), false));
     }
 
     result_lines
         .into_iter()
-        .map(|(line_width, line_codes, newline_flag)| {
+        .map(|fmt_line| {
             let mut line = String::new();
-            for (is_emphasis, line_seg) in line_codes {
-                if newline_flag {
+            for (is_emphasis, line_seg) in fmt_line.line_segs {
+                if fmt_line.newline_flag {
                     line.push_str(&line_seg);
                 } else {
                     match status.piece_color(color, is_emphasis) {
@@ -201,7 +243,7 @@ pub fn format_side(
                     }
                 }
             }
-            let padding_cnts = width.saturating_sub(line_width);
+            let padding_cnts = width.saturating_sub(fmt_line.line_seg_width);
             line.push_str(" ".repeat(padding_cnts).as_str());
             line
         })
@@ -254,6 +296,7 @@ pub fn render_rows(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     #[test]
     fn test_saturating_minus() {
@@ -261,5 +304,32 @@ mod tests {
         let b = a.saturating_sub(11);
         println!("{:?}", b);
         println!("{:?}", " ".repeat(b));
+    }
+
+    /// 回归：无尾换行行的正文子行必须染色，marker 子行不染色
+    ///
+    /// 旧代码在 map 里误用外层局部 `newline_flag`（无尾换行文件在循环里已翻成 true），
+    /// 正文子行也被去色；改成逐行的 `fmt_line.newline_flag` 后正文恢复染色。
+    #[test]
+    fn format_side_colors_content_but_not_missing_newline_marker() {
+        // plain_seg 对“无尾换行行”的产出：单个 Segment 内嵌 \n + marker
+        let segs = vec![(false, format!("beta\n{}", consts::NO_NEWLINE))];
+
+        // width=50 保证不折行（"beta"=4、marker=27 均 <50）；Insert→绿色；color=true
+        let out = format_side(Some(&segs), 50, LineStatus::Insert, true);
+
+        // 正文子行 + marker 子行
+        assert_eq!(out.len(), 2);
+
+        // 期望色码不硬写，走 piece_color（顺带验证 Insert 无视 is_emphasis）
+        let code = LineStatus::Insert.piece_color(true, false).unwrap();
+
+        // 回归闸：正文子行必须染色（旧代码此处为 false → 测试红）
+        assert!(out[0].contains(code), "正文子行应被染色");
+        assert!(out[0].contains("beta"));
+
+        // marker 子行不染色
+        assert!(!out[1].contains(code), "missing-newline marker 不应染色");
+        assert!(out[1].contains("No newline"));
     }
 }
