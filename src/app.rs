@@ -65,6 +65,16 @@ impl cli::Cli {
                     changed = true;
                 }
 
+                if let Some(folded) = c.folded {
+                    app_config.folded = folded;
+                    changed = true;
+                }
+
+                if let Some(folded_radius) = c.folded_radius {
+                    app_config.folded_radius = folded_radius;
+                    changed = true;
+                }
+
                 if changed {
                     manager.save(&app_config)?;
                 }
@@ -84,22 +94,15 @@ impl cli::Cli {
                     None => (d.left_file, d.right_file),
                 };
 
-                let enable_inline = app_config.inline;
-
                 let mut p = pagers::Pager::new(d.less, app_config.less_path)?;
-
-                // 判断是否重定向
-                let use_color = io::stdout().is_terminal();
-
-                let file_limits = app_config.file_limit_bytes;
 
                 let res = match d.style {
                     cli::DiffStyle::Git => compare::compare_files_git_style(
                         &left_file,
                         &right_file,
                         p.writer(),
-                        use_color,
-                        file_limits,
+                        io::stdout().is_terminal(),
+                        app_config.file_limit_bytes,
                     ),
                     cli::DiffStyle::Table => compare::compare_files_table_style(
                         &left_file,
@@ -107,11 +110,11 @@ impl cli::Cli {
                         app_config.code_width,
                         app_config.no_width,
                         p.writer(),
-                        enable_inline,
-                        use_color,
-                        file_limits,
-                        true,
-                        1,
+                        app_config.inline,
+                        io::stdout().is_terminal(),
+                        app_config.file_limit_bytes,
+                        app_config.folded,
+                        app_config.folded_radius,
                     ),
                 };
 

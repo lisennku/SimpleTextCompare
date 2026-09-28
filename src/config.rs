@@ -26,6 +26,8 @@ pub struct AppConfig {
     pub less_path: Option<PathBuf>,
     pub inline: bool,
     pub file_limit_bytes: u64,
+    pub folded: bool,
+    pub folded_radius: usize,
 }
 
 impl AppConfig {
@@ -36,6 +38,8 @@ impl AppConfig {
         less_path: Option<PathBuf>,
         inline: bool,
         file_limit_bytes: u64,
+        folded: bool,
+        folded_radius: usize,
     ) -> Self {
         Self {
             code_width,
@@ -43,6 +47,8 @@ impl AppConfig {
             less_path,
             inline,
             file_limit_bytes,
+            folded,
+            folded_radius,
         }
     }
     pub fn validate(&self) -> Result<()> {
@@ -71,6 +77,10 @@ impl AppConfig {
 /// 不启用行内对比
 ///
 /// 文件限制`50MiB`
+///
+/// 启用折叠
+///
+/// 折叠上下显示3行
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
@@ -79,6 +89,8 @@ impl Default for AppConfig {
             less_path: None,
             inline: false,
             file_limit_bytes: 50 * 1024 * 1024,
+            folded: true,
+            folded_radius: 3,
         }
     }
 }
@@ -126,6 +138,12 @@ impl ConfigManager {
 
         let raw_bytes = config.file_limit_bytes;
         println!("单个文件的大小限制为 {}", BytesUnit::display(raw_bytes));
+
+        println!(
+            "equal块折叠 {}",
+            if config.folded { "启用" } else { "未启用" }
+        );
+        println!("radius 行数为 {}", config.folded_radius);
 
         Ok(())
     }

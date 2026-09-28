@@ -35,10 +35,12 @@
 //! - 针对`Replace`类型
 //!     - 如果启用`--inline`，则将`left_line`/`right_line`均填充值，可能是`None`
 //!     - 如果未启用`--inline`，则按照`Insert`/`Delete`处理
+
 use crate::common::{self, Segment};
 use crate::consts;
 use crate::line_status::LineStatus;
 use similar::{ChangeTag, DiffOp, DiffTag, TextDiff};
+use std::ops::Range;
 
 /// 功能函数，非`inline`模式时，负责将闭包中的`&str`转为只有一个元素的`Vec`，元素为Segment
 fn plain_seg(text: &str) -> Vec<Segment> {
@@ -52,6 +54,29 @@ fn plain_seg(text: &str) -> Vec<Segment> {
         sanitized_text.push_str(consts::NO_NEWLINE);
     }
     vec![Segment::new(false, sanitized_text)]
+}
+
+/// 功能函数，将`equal`块的处理抽象为函数
+fn equal_row_handle(
+    old_range: Range<usize>,
+    new_range: Range<usize>,
+    diff: &TextDiff<str>,
+    rows: &mut Vec<DiffParseRow>,
+) {
+    for (o, n) in old_range.zip(new_range) {
+        let left_no = Some(o + 1);
+        let right_no = Some(n + 1);
+        let left_line = diff.old_slice(o).map(plain_seg);
+        let right_line = diff.new_slice(n).map(plain_seg);
+
+        rows.push(DiffParseRow::Diff(Row::new(
+            left_no,
+            right_no,
+            left_line,
+            right_line,
+            LineStatus::Equal,
+        )))
+    }
 }
 
 #[derive(Debug)]
@@ -113,41 +138,15 @@ fn assemble_op_rows_inline_false(
     match op.tag() {
         DiffTag::Equal => {
             if !enable_folded {
-                for (o, n) in op.old_range().zip(op.new_range()) {
-                    let left_no = Some(o + 1);
-                    let right_no = Some(n + 1);
-                    let left_line = diff.old_slice(o).map(plain_seg);
-                    let right_line = diff.new_slice(n).map(plain_seg);
-
-                    sub_rows.push(DiffParseRow::Diff(Row::new(
-                        left_no,
-                        right_no,
-                        left_line,
-                        right_line,
-                        LineStatus::Equal,
-                    )))
-                }
+                equal_row_handle(op.old_range(), op.new_range(), diff, &mut sub_rows);
             } else {
                 let equal_total_len = op.old_range().len();
                 match equal_total_len
-                    .checked_sub(2 * folded_radius)
+                    .checked_sub(folded_radius.saturating_mul(2)) // 安全处理防止溢出
                     .filter(|&m| m > 0)
                 {
                     None => {
-                        for (o, n) in op.old_range().zip(op.new_range()) {
-                            let left_no = Some(o + 1);
-                            let right_no = Some(n + 1);
-                            let left_line = diff.old_slice(o).map(plain_seg);
-                            let right_line = diff.new_slice(n).map(plain_seg);
-
-                            sub_rows.push(DiffParseRow::Diff(Row::new(
-                                left_no,
-                                right_no,
-                                left_line,
-                                right_line,
-                                LineStatus::Equal,
-                            )))
-                        }
+                        equal_row_handle(op.old_range(), op.new_range(), diff, &mut sub_rows);
                     }
                     Some(remained) => {
                         let header_old_range =
@@ -158,41 +157,14 @@ fn assemble_op_rows_inline_false(
                         let tail_old_range = op.old_range().end - folded_radius..op.old_range().end;
                         let tail_new_range = op.new_range().end - folded_radius..op.new_range().end;
 
-                        for (o1, n1) in header_old_range.zip(header_new_range) {
-                            let left_no = Some(o1 + 1);
-                            let right_no = Some(n1 + 1);
-                            let left_line = diff.old_slice(o1).map(plain_seg);
-                            let right_line = diff.new_slice(n1).map(plain_seg);
-
-                            sub_rows.push(DiffParseRow::Diff(Row::new(
-                                left_no,
-                                right_no,
-                                left_line,
-                                right_line,
-                                LineStatus::Equal,
-                            )))
-                        }
+                        equal_row_handle(header_old_range, header_new_range, diff, &mut sub_rows);
 
                         sub_rows.push(DiffParseRow::Folded {
                             left_start: op.old_range().start + folded_radius + 1,
                             right_start: op.new_range().start + folded_radius + 1,
                             count: remained,
                         });
-
-                        for (o2, n2) in tail_old_range.zip(tail_new_range) {
-                            let left_no = Some(o2 + 1);
-                            let right_no = Some(n2 + 1);
-                            let left_line = diff.old_slice(o2).map(plain_seg);
-                            let right_line = diff.new_slice(n2).map(plain_seg);
-
-                            sub_rows.push(DiffParseRow::Diff(Row::new(
-                                left_no,
-                                right_no,
-                                left_line,
-                                right_line,
-                                LineStatus::Equal,
-                            )))
-                        }
+                        equal_row_handle(tail_old_range, tail_new_range, diff, &mut sub_rows);
                     }
                 }
             }

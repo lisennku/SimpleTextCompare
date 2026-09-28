@@ -170,6 +170,7 @@ pub struct Config {
     /// 开启参数，接收0或1个对应值参数，如果为0，则用默认值
     #[arg(long, action = ArgAction::Set, num_args = 0..=1, default_missing_value = "true",require_equals = true)]
     pub inline: Option<bool>,
+
     #[arg(
         long,
         value_name = "SIZE",
@@ -191,4 +192,10 @@ pub struct Config {
         ),
     )]
     pub file_limit_bytes: Option<u64>,
+    /// 是否启用折叠
+    #[arg(long, action = ArgAction::Set, num_args = 0..=1, default_missing_value = "true", require_equals = true)]
+    pub folded: Option<bool>,
+    /// 折叠块上下显示原文的行数
+    #[arg(long)]
+    pub folded_radius: Option<usize>,
 }
