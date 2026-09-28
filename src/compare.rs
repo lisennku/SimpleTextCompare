@@ -153,15 +153,15 @@ pub fn compare_files_git_style(
 
     let unified_diff = diff.unified_diff();
 
-    let chunks = unified_diff.iter_hunks().collect::<Vec<_>>();
-    if chunks.is_empty() {
+    let hunks = unified_diff.iter_hunks().collect::<Vec<_>>();
+    if hunks.is_empty() {
         return Ok(());
     }
 
     writeln!(writer, "--- {}", left_file_name)?;
     writeln!(writer, "+++ {}", right_file_name)?;
 
-    for hunk in chunks {
+    for hunk in hunks {
         if color {
             writeln!(writer, "{}{}{}", CYAN, hunk.header(), RESET)?;
         } else {
