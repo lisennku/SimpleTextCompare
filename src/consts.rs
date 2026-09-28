@@ -1,3 +1,5 @@
+//! 将常量统一维护到本文件内
+
 /// 指定配置文件名
 pub const CONFIG_FILE_NAME: &str = r"stc.toml";
 /// 指定存放配置文件的目录名

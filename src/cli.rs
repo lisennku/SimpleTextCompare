@@ -6,7 +6,7 @@
 //! - `diff` 用于文件比较
 //!
 //! # `conf`子命令
-//! `conf`子命令目前拥有`--list`/`--init`/`--code-width`/`--no-width`/`--less-path`/`--inline`参数
+//! `conf`子命令目前拥有`--list`/`--init`/`--code-width`/`--no-width`/`--less-path`/`--inline`/`--file-limit-bytes`/`--folded`/`--folded-radius`参数
 //! - `--list`
 //!     - 展示配置
 //! - `--init`
@@ -19,6 +19,12 @@
 //!     - `less`可执行程序位置
 //! - `--inline`
 //!     - 是否开启行内比较 将`Replace`的差异放到一行
+//! - `--file-limit-bytes`
+//!     - 单个文件大小限制
+//! - `--folded`
+//!     - 是否启用`Equal`折叠
+//! - `--folded-radius`
+//!     - 折叠前后行数
 //!
 //! `--list`与`--init`互斥，不可同时使用
 //!
@@ -26,7 +32,7 @@
 //!
 //! `--init`与其他参数一起使用时，先生成默认配置，再覆盖指定值并保存
 //! # `diff`子命令
-//! `diff`子命令目前拥有`left_file`/`right_file`/`--path`/`--less`参数
+//! `diff`子命令目前拥有`left_file`/`right_file`/`--path`/`--less`/`--style`参数
 //! - `left_file` 指定左文件
 //! - `right_file` 指定右文件
 //! - `--path` 路径，当左右文件在统一路径下时使用，以便简略输入所有文件名
@@ -72,7 +78,7 @@ fn less_path_validate(p: &str) -> Result<PathBuf> {
 
     Ok(path)
 }
-fn file_limit_bytes_vlaidate(b: &str) -> Result<u64> {
+fn file_limit_bytes_validate(b: &str) -> Result<u64> {
     let non_num_first_pos = b
         .find(|c: char| !c.is_ascii_digit())
         .unwrap_or_else(|| b.len());
@@ -174,7 +180,7 @@ pub struct Config {
     #[arg(
         long,
         value_name = "SIZE",
-        value_parser = file_limit_bytes_vlaidate,
+        value_parser = file_limit_bytes_validate,
         help = "单个文件大小上限，可带 K/M/G 后缀（如 10MiB、1G）",
         long_help = concat!(
             "单个文件大小上限，可带 K/M/G 后缀。\n",

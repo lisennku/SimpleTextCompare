@@ -14,11 +14,13 @@ use std::path::PathBuf;
 /// - `less_path` `less`可执行程序的位置
 /// - `inline` 是否启用行内对比
 /// - `file_limit_bytes` 单个文件最大的字节数 用于大文件内存保护，防止`OOM`
+/// - `folded` 是否启用`Equal`行折叠
+/// - `folded_radius`  折叠后前后显示行数
 /// ## 方法
 /// - `new` 根据传入的参数返回一个`AppConfig`对象
 /// - `validate` 校验配置项是否合法
 /// ## `Default trait`
-/// 实现了`default`函数，默认以`50_usize`/`4_usize`/`None`/`false`/`1GiB`传入
+/// 实现了`default`函数，默认以`50_usize`/`4_usize`/`None`/`false`/`50MiB`/`true`/`3`传入
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AppConfig {
     pub code_width: usize,

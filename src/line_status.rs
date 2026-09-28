@@ -8,7 +8,6 @@ use crate::ansi_config::{GREEN, RED, YELLOW};
 /// - `Insert` 表示右文件较于左文件 新增了该行
 /// - `Replace` 表示左右文件不同
 #[derive(Copy, Clone, Debug)]
-#[allow(dead_code)]
 pub enum LineStatus {
     Equal,
     Delete,

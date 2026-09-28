@@ -4,8 +4,8 @@
 //!
 //! `Diff`变体是一个单元组，包括一个`Row`结构体实例
 //!
-//! `Folder`是一个结构体，包括左侧起始位置、右侧起始位置、长度
-//!     - `Folder`用于表示`Equal`块
+//! `Folded`是一个结构体，包括左侧起始位置、右侧起始位置、长度
+//!     - `Folded`用于表示`Equal`块
 //!
 //! ```rust
 //! struct Row {
@@ -289,42 +289,4 @@ pub fn build_rows(
     }
 
     rows
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-    use std::path::PathBuf;
-    #[test]
-    fn row_test_for_build_rows() {
-        let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
-        let left = base_path.join("left.txt");
-        let right = base_path.join("right.txt");
-
-        let left_str = fs::read_to_string(&left).unwrap();
-        let right_str = fs::read_to_string(&right).unwrap();
-
-        let diff = TextDiff::from_lines(&left_str, &right_str);
-        let res = build_rows(&diff, false, true, 1);
-        for item in res {
-            println!("{:?}", item);
-        }
-    }
-
-    #[test]
-    fn row_test_for_build_rows_inline() {
-        let base_path = PathBuf::from(r"C:\Users\LFJ\Desktop\Compare");
-        let left = base_path.join("left.txt");
-        let right = base_path.join("right.txt");
-
-        let left_str = fs::read_to_string(&left).unwrap();
-        let right_str = fs::read_to_string(&right).unwrap();
-
-        let diff = TextDiff::from_lines(&left_str, &right_str);
-        let res = build_rows(&diff, true, false, 3);
-        for item in res {
-            println!("{:?}", item);
-        }
-    }
 }

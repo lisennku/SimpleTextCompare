@@ -1,3 +1,5 @@
+//! 用于颜色的`ANSI`字符串
+
 #![allow(dead_code)]
 
 pub const RESET: &str = "\x1b[0m";

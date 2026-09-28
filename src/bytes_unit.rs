@@ -1,6 +1,9 @@
+//! 本模块主要为配置参数`file_limit_bytes`解析使用
+//! 命令行配置时可以使用诸如`5000`/`50MiB`/`1gb`/`20K`等，后缀匹配`B|[KMG](I?B)?`(不区分大小写),也可为空(纯数字按`B`处理)
 use crate::consts;
 use anyhow::{Result, anyhow, bail};
 
+/// 字节单位
 #[derive(Debug, PartialEq)]
 pub enum BytesUnit {
     Bytes,
@@ -10,6 +13,8 @@ pub enum BytesUnit {
 }
 
 impl BytesUnit {
+    /// 根据不同的后缀，统一处理
+    /// `B|[KMG](I?B)?`是合法的后缀
     pub fn new(suffixes: &str) -> Result<Self> {
         let mut suffixes = suffixes.to_uppercase();
         if suffixes.is_empty() {
@@ -28,7 +33,8 @@ impl BytesUnit {
             bail!("Unknown bytes suffixes: {}", suffixes);
         }
     }
-
+    /// 通过字节数，返回对应的单位
+    /// 返回最大的能整除的单位
     fn from_bytes(bytes: u64) -> Self {
         let all_form = [Self::GiBytes, Self::MiBytes, Self::KiBytes, Self::Bytes];
         all_form
@@ -36,12 +42,12 @@ impl BytesUnit {
             .find(|u| bytes >= u.multiplier() && bytes % u.multiplier() == 0)
             .unwrap_or(BytesUnit::Bytes)
     }
-
+    /// 根据字节数返回对应的展示字符串
     pub fn display(limit_bytes: u64) -> String {
         let unit = Self::from_bytes(limit_bytes);
         format!("{}{}", limit_bytes / unit.multiplier(), unit.label())
     }
-
+    /// 单位对应的标签
     fn label(&self) -> String {
         match self {
             BytesUnit::GiBytes => String::from("GiB"),
@@ -50,6 +56,7 @@ impl BytesUnit {
             BytesUnit::Bytes => String::from("B"),
         }
     }
+    /// 单位对应字节的倍数
     fn multiplier(&self) -> u64 {
         match self {
             BytesUnit::Bytes => 1,
@@ -58,7 +65,8 @@ impl BytesUnit {
             BytesUnit::GiBytes => 1024 * 1024 * 1024,
         }
     }
-
+    /// 根据给定的单位和该单位的数值，转换为字节数
+    /// 溢出时返回`Err`
     pub fn multiply(&self, nums: u64) -> Result<u64> {
         nums.checked_mul(self.multiplier())
             .ok_or_else(|| anyhow!("Overflow"))
