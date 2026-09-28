@@ -91,6 +91,8 @@ pub fn compare_files_table_style(
     inline: bool,
     color: bool,
     file_limit_bytes: u64,
+    enable_folded: bool,
+    folded_radius: usize,
 ) -> Result<()> {
     let left_file_name = get_file_name_display_safety(left, "<left>", Some(code_width));
     let right_file_name = get_file_name_display_safety(right, "<right>", Some(code_width));
@@ -113,13 +115,16 @@ pub fn compare_files_table_style(
         writer,
         color,
     )?;
-    output::output_separator_row(code_width * 2 + valid_line_no_width * 2 + 3 * 4 + 7, writer)?;
 
-    let rows = build_rows(&diff, inline);
+    let total_width = output::table_total_width(code_width, valid_line_no_width);
+    output::output_separator_row(total_width, writer)?;
+
+    let rows = build_rows(&diff, inline, enable_folded, folded_radius);
     output::render_rows(&rows, code_width, valid_line_no_width, writer, color)?;
 
     Ok(())
 }
+
 /// 使用`git diff`的样式进行输出
 ///
 /// 没有行内染色的判断，因为当前模式下，都是按行比较
@@ -218,7 +223,18 @@ mod tests {
             r"D:\vscode_workspace\vscode_workspace\codes_rust\rust_learn\text_compare_cli\comp.txt",
         );
         let mut w = std::io::stdout();
-        compare_files_table_style(&p1, &p2, 50, 3, &mut w, false, true, 50 * 1024 * 1024)?;
+        compare_files_table_style(
+            &p1,
+            &p2,
+            50,
+            3,
+            &mut w,
+            false,
+            true,
+            50 * 1024 * 1024,
+            false,
+            0,
+        )?;
         Ok(())
     }
 
@@ -254,7 +270,18 @@ mod tests {
 
         let mut w = std::io::stdout();
 
-        compare_files_table_style(&left, &right, 70, 3, &mut w, false, true, 50 * 1024 * 1024)?;
+        compare_files_table_style(
+            &left,
+            &right,
+            70,
+            3,
+            &mut w,
+            false,
+            true,
+            50 * 1024 * 1024,
+            false,
+            0,
+        )?;
         Ok(())
     }
 

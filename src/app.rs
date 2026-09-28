@@ -110,6 +110,8 @@ impl cli::Cli {
                         enable_inline,
                         use_color,
                         file_limits,
+                        true,
+                        1,
                     ),
                 };
 

@@ -1,4 +1,11 @@
-//! `TextDiff`产出的结果行的抽象为一个`Row`实例
+//! 将`TextDiff`产出的结果行的抽象为一个`DiffParseRow`实例
+//!
+//! 枚举`DiffParseRow`有两个变体，分别是`Diff`和`Folded`
+//!
+//! `Diff`变体是一个单元组，包括一个`Row`结构体实例
+//!
+//! `Folder`是一个结构体，包括左侧起始位置、右侧起始位置、长度
+//!     - `Folder`用于表示`Equal`块
 //!
 //! ```rust
 //! struct Row {
@@ -74,6 +81,19 @@ impl Row {
     }
 }
 
+/// `DiffParseRow` 枚举
+///
+/// 用于将差异行和相同行折叠为Hunk的对象统一起来
+#[derive(Debug)]
+pub enum DiffParseRow {
+    Diff(Row),
+    Folded {
+        left_start: usize,
+        right_start: usize,
+        count: usize,
+    },
+}
+
 /// 用于对`Delete`/`Insert`/`Equal`块和`inline=false`时的Replace块进行拼接
 ///
 /// 输入：TextDiff的引用，op块
@@ -83,23 +103,98 @@ impl Row {
 /// 每个`op`块内部，通过`old_range`/`new_range`作为索引，获取对应文本，本身+1作为行号
 ///
 /// 获取到的文本和`false`组装作为一个元组
-fn assemble_op_rows_inline_false(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> {
-    let mut sub_rows: Vec<Row> = Vec::new();
+fn assemble_op_rows_inline_false(
+    diff: &TextDiff<str>,
+    op: &DiffOp,
+    enable_folded: bool,
+    folded_radius: usize,
+) -> Vec<DiffParseRow> {
+    let mut sub_rows: Vec<DiffParseRow> = Vec::new();
     match op.tag() {
         DiffTag::Equal => {
-            for (o, n) in op.old_range().zip(op.new_range()) {
-                let left_no = Some(o + 1);
-                let right_no = Some(n + 1);
-                let left_line = diff.old_slice(o).map(plain_seg);
-                let right_line = diff.new_slice(n).map(plain_seg);
+            if !enable_folded {
+                for (o, n) in op.old_range().zip(op.new_range()) {
+                    let left_no = Some(o + 1);
+                    let right_no = Some(n + 1);
+                    let left_line = diff.old_slice(o).map(plain_seg);
+                    let right_line = diff.new_slice(n).map(plain_seg);
 
-                sub_rows.push(Row::new(
-                    left_no,
-                    right_no,
-                    left_line,
-                    right_line,
-                    LineStatus::Equal,
-                ))
+                    sub_rows.push(DiffParseRow::Diff(Row::new(
+                        left_no,
+                        right_no,
+                        left_line,
+                        right_line,
+                        LineStatus::Equal,
+                    )))
+                }
+            } else {
+                let equal_total_len = op.old_range().len();
+                match equal_total_len
+                    .checked_sub(2 * folded_radius)
+                    .filter(|&m| m > 0)
+                {
+                    None => {
+                        for (o, n) in op.old_range().zip(op.new_range()) {
+                            let left_no = Some(o + 1);
+                            let right_no = Some(n + 1);
+                            let left_line = diff.old_slice(o).map(plain_seg);
+                            let right_line = diff.new_slice(n).map(plain_seg);
+
+                            sub_rows.push(DiffParseRow::Diff(Row::new(
+                                left_no,
+                                right_no,
+                                left_line,
+                                right_line,
+                                LineStatus::Equal,
+                            )))
+                        }
+                    }
+                    Some(remained) => {
+                        let header_old_range =
+                            op.old_range().start..op.old_range().start + folded_radius;
+                        let header_new_range =
+                            op.new_range().start..op.new_range().start + folded_radius;
+
+                        let tail_old_range = op.old_range().end - folded_radius..op.old_range().end;
+                        let tail_new_range = op.new_range().end - folded_radius..op.new_range().end;
+
+                        for (o1, n1) in header_old_range.zip(header_new_range) {
+                            let left_no = Some(o1 + 1);
+                            let right_no = Some(n1 + 1);
+                            let left_line = diff.old_slice(o1).map(plain_seg);
+                            let right_line = diff.new_slice(n1).map(plain_seg);
+
+                            sub_rows.push(DiffParseRow::Diff(Row::new(
+                                left_no,
+                                right_no,
+                                left_line,
+                                right_line,
+                                LineStatus::Equal,
+                            )))
+                        }
+
+                        sub_rows.push(DiffParseRow::Folded {
+                            left_start: op.old_range().start + folded_radius + 1,
+                            right_start: op.new_range().start + folded_radius + 1,
+                            count: remained,
+                        });
+
+                        for (o2, n2) in tail_old_range.zip(tail_new_range) {
+                            let left_no = Some(o2 + 1);
+                            let right_no = Some(n2 + 1);
+                            let left_line = diff.old_slice(o2).map(plain_seg);
+                            let right_line = diff.new_slice(n2).map(plain_seg);
+
+                            sub_rows.push(DiffParseRow::Diff(Row::new(
+                                left_no,
+                                right_no,
+                                left_line,
+                                right_line,
+                                LineStatus::Equal,
+                            )))
+                        }
+                    }
+                }
             }
         }
 
@@ -108,7 +203,13 @@ fn assemble_op_rows_inline_false(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> 
                 for o in op.old_range() {
                     let left_no = Some(o + 1);
                     let left_line = diff.old_slice(o).map(plain_seg);
-                    sub_rows.push(Row::new(left_no, None, left_line, None, LineStatus::Delete))
+                    sub_rows.push(DiffParseRow::Diff(Row::new(
+                        left_no,
+                        None,
+                        left_line,
+                        None,
+                        LineStatus::Delete,
+                    )))
                 }
             }
 
@@ -116,13 +217,13 @@ fn assemble_op_rows_inline_false(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> 
                 for n in op.new_range() {
                     let right_no = Some(n + 1);
                     let right_line = diff.new_slice(n).map(plain_seg);
-                    sub_rows.push(Row::new(
+                    sub_rows.push(DiffParseRow::Diff(Row::new(
                         None,
                         right_no,
                         None,
                         right_line,
                         LineStatus::Insert,
-                    ))
+                    )))
                 }
             }
         }
@@ -182,7 +283,7 @@ fn assemble_op_rows_inline_true(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> {
 
     sub_rows
 }
-/// 负责从`TextDiff`中解析出一个`Vec<Row>`
+/// 负责从`TextDiff`中解析出一个`Vec<DiffParseRow>`
 ///
 /// `TextDiff`是一个结构体，内部存储对于`old`/`new`的字符串的引用，可以通过`old_slice()`/`new_slice()`获取索引的文本引用
 ///
@@ -191,13 +292,27 @@ fn assemble_op_rows_inline_true(diff: &TextDiff<str>, op: &DiffOp) -> Vec<Row> {
 /// `DiffOp`中并不实际存储字符串，而是通过`.new_range()`/`old_range()`获取对应索引
 ///
 /// 启用`inline`参数，`Replace`块对应的每行`status`都是`Replace`，如果未启用`inline`则对应的是`Delete`/`Insert`
-pub fn build_rows(diff: &TextDiff<str>, inline: bool) -> Vec<Row> {
-    let mut rows: Vec<Row> = Vec::new();
+pub fn build_rows(
+    diff: &TextDiff<str>,
+    inline: bool,
+    enable_folded: bool,
+    folded_radius: usize,
+) -> Vec<DiffParseRow> {
+    let mut rows: Vec<DiffParseRow> = Vec::new();
     for op in diff.ops() {
         if inline && matches!(op.tag(), DiffTag::Replace) {
-            rows.extend(assemble_op_rows_inline_true(diff, op));
+            rows.extend(
+                assemble_op_rows_inline_true(diff, op)
+                    .into_iter()
+                    .map(DiffParseRow::Diff),
+            );
         } else {
-            rows.extend(assemble_op_rows_inline_false(diff, op));
+            rows.extend(assemble_op_rows_inline_false(
+                diff,
+                op,
+                enable_folded,
+                folded_radius,
+            ));
         }
     }
 
@@ -219,7 +334,7 @@ mod tests {
         let right_str = fs::read_to_string(&right).unwrap();
 
         let diff = TextDiff::from_lines(&left_str, &right_str);
-        let res = build_rows(&diff, false);
+        let res = build_rows(&diff, false, true, 1);
         for item in res {
             println!("{:?}", item);
         }
@@ -235,7 +350,7 @@ mod tests {
         let right_str = fs::read_to_string(&right).unwrap();
 
         let diff = TextDiff::from_lines(&left_str, &right_str);
-        let res = build_rows(&diff, true);
+        let res = build_rows(&diff, true, false, 3);
         for item in res {
             println!("{:?}", item);
         }

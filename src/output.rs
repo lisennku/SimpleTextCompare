@@ -19,7 +19,7 @@ use crate::ansi_config::RESET;
 use crate::common::Segment;
 use crate::consts;
 use crate::line_status::LineStatus;
-use crate::row::Row;
+use crate::row::DiffParseRow;
 use std::io::{self, Write};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
@@ -56,6 +56,12 @@ fn format_line_no(index: usize, line_no: Option<usize>) -> String {
         _ => "/".to_string(),
     }
 }
+
+/// 计算整个输出的列宽
+pub fn table_total_width(code_width: usize, no_width: usize) -> usize {
+    code_width * 2 + no_width * 2 + 3 * 4 + consts::STATUS_WIDTH
+}
+
 /// 本函数用于填充宽度不满足width的文本
 ///
 /// - `text` 文本
@@ -218,40 +224,64 @@ pub fn format_side(
 ///
 /// 因为要输出的行可能被分成多个子行，因此需要循环处理
 pub fn render_rows(
-    rows: &[Row],
+    rows: &[DiffParseRow],
     code_width: usize,
     no_width: usize,
     writer: &mut dyn Write,
     color: bool,
 ) -> io::Result<()> {
-    for row in rows {
-        let left_segs = format_side(row.left_line.as_deref(), code_width, row.status, color);
-        let right_segs = format_side(row.right_line.as_deref(), code_width, row.status, color);
+    for item in rows {
+        match item {
+            DiffParseRow::Diff(row) => {
+                let left_segs =
+                    format_side(row.left_line.as_deref(), code_width, row.status, color);
+                let right_segs =
+                    format_side(row.right_line.as_deref(), code_width, row.status, color);
 
-        let max_lines_cnt = left_segs.len().max(right_segs.len()).max(1);
+                let max_lines_cnt = left_segs.len().max(right_segs.len()).max(1);
 
-        let placeholder = match row.status.piece_color(color, true) {
-            Some(c) => format!("{c}-{RESET}{}", " ".repeat(code_width.saturating_sub(1))),
-            None => format!("{}{}", "-", " ".repeat(code_width.saturating_sub(1))),
-        };
+                let placeholder = match row.status.piece_color(color, true) {
+                    Some(c) => format!("{c}-{RESET}{}", " ".repeat(code_width.saturating_sub(1))),
+                    None => format!("{}{}", "-", " ".repeat(code_width.saturating_sub(1))),
+                };
 
-        for i in 0..max_lines_cnt {
-            let left_no = format_line_no(i, row.left_no);
-            let right_no = format_line_no(i, row.right_no);
+                for i in 0..max_lines_cnt {
+                    let left_no = format_line_no(i, row.left_no);
+                    let right_no = format_line_no(i, row.right_no);
 
-            let left_seg = left_segs.get(i).unwrap_or(&placeholder);
-            let right_seg = right_segs.get(i).unwrap_or(&placeholder);
-            let status_text = if i == 0 { row.status.to_str() } else { "" };
+                    let left_seg = left_segs.get(i).unwrap_or(&placeholder);
+                    let right_seg = right_segs.get(i).unwrap_or(&placeholder);
+                    let status_text = if i == 0 { row.status.to_str() } else { "" };
 
-            writeln!(
-                writer,
-                "{} | {} | {} | {} | {}",
-                padding_white_space(&left_no, no_width, false,),
-                left_seg,
-                padding_white_space(&right_no, no_width, false,),
-                right_seg,
-                padding_white_space(status_text, consts::STATUS_WIDTH, true,)
-            )?;
+                    writeln!(
+                        writer,
+                        "{} | {} | {} | {} | {}",
+                        padding_white_space(&left_no, no_width, false,),
+                        left_seg,
+                        padding_white_space(&right_no, no_width, false,),
+                        right_seg,
+                        padding_white_space(status_text, consts::STATUS_WIDTH, true,)
+                    )?;
+                }
+            }
+            DiffParseRow::Folded {
+                left_start,
+                right_start,
+                count,
+            } => {
+                let left_end = left_start + count - 1; // count>=1 已被 filter 保证,不会下溢
+                let right_end = right_start + count - 1;
+
+                let banner = format!(
+                    "... 已折叠 {count} 行 (左 {left_start}-{left_end} · 右 {right_start}-{right_end}) ..."
+                );
+
+                let total = table_total_width(code_width, no_width);
+                let bw = UnicodeWidthStr::width(banner.as_str()); // ← 别用 .len(),有中文/符号
+                let pad = total.saturating_sub(bw) / 2; // 居中;saturating 防 banner 比 total 宽时越界
+
+                writeln!(writer, "{}{banner}", " ".repeat(pad))?;
+            }
         }
     }
 
