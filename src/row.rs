@@ -290,3 +290,153 @@ pub fn build_rows(
 
     rows
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 7 行完全相同的文本，`old`/`new`一致，构成一个长度为7的`Equal`块
+    fn seven_same_lines() -> String {
+        (1..=7).map(|i| format!("{}\n", i)).collect()
+    }
+
+    /// 关闭折叠时，长度为7的`Equal`块应展开为7个`Diff`行，行号左右一致
+    #[test]
+    fn fold_disabled_expands_all_equal() {
+        let text = seven_same_lines();
+        let diff = TextDiff::from_lines(&text, &text);
+        let rows = build_rows(&diff, false, false, 1);
+
+        assert_eq!(rows.len(), 7);
+        for (i, row) in rows.iter().enumerate() {
+            match row {
+                DiffParseRow::Diff(r) => {
+                    assert!(matches!(r.status, LineStatus::Equal));
+                    assert_eq!(r.left_no, Some(i + 1));
+                    assert_eq!(r.right_no, Some(i + 1));
+                }
+                _ => panic!("folding disabled should yield only Diff rows"),
+            }
+        }
+    }
+
+    /// radius=1 时，7行的`Equal`块折叠为：1个头行 + 1个`Folded` + 1个尾行
+    #[test]
+    fn fold_long_run_head_fold_tail() {
+        let text = seven_same_lines();
+        let diff = TextDiff::from_lines(&text, &text);
+        let rows = build_rows(&diff, false, true, 1);
+
+        assert_eq!(rows.len(), 3);
+
+        match &rows[0] {
+            DiffParseRow::Diff(r) => {
+                assert!(matches!(r.status, LineStatus::Equal));
+                assert_eq!(r.left_no, Some(1));
+            }
+            _ => panic!("row 0 should be the head Diff row"),
+        }
+
+        match &rows[1] {
+            DiffParseRow::Folded {
+                left_start,
+                right_start,
+                count,
+            } => {
+                assert_eq!(*left_start, 2);
+                assert_eq!(*right_start, 2);
+                assert_eq!(*count, 5); // 7 - 2*1
+            }
+            _ => panic!("row 1 should be the Folded marker"),
+        }
+
+        match &rows[2] {
+            DiffParseRow::Diff(r) => {
+                assert!(matches!(r.status, LineStatus::Equal));
+                assert_eq!(r.left_no, Some(7));
+            }
+            _ => panic!("row 2 should be the tail Diff row"),
+        }
+    }
+
+    /// radius=3 时，7行的`Equal`块仍折叠，但头尾各占3行，中间只剩1行被折叠
+    #[test]
+    fn fold_radius_controls_count() {
+        let text = seven_same_lines();
+        let diff = TextDiff::from_lines(&text, &text);
+        let rows = build_rows(&diff, false, true, 3);
+
+        // 3 head + 1 folded + 3 tail
+        assert_eq!(rows.len(), 7);
+
+        let folded = rows.iter().find_map(|row| match row {
+            DiffParseRow::Folded {
+                left_start, count, ..
+            } => Some((*left_start, *count)),
+            _ => None,
+        });
+        assert_eq!(folded, Some((4, 1))); // left_start = 0+3+1, count = 7 - 2*3
+    }
+
+    /// 边界：`Equal`块长度恰好等于`2*radius`时不折叠（`.filter(|&m| m>0)`拒绝余数0）
+    #[test]
+    fn no_fold_when_run_equals_2radius() {
+        let text: String = (1..=6).map(|i| format!("{}\n", i)).collect();
+        let diff = TextDiff::from_lines(&text, &text);
+        let rows = build_rows(&diff, false, true, 3);
+
+        assert_eq!(rows.len(), 6);
+        assert!(rows
+            .iter()
+            .all(|row| matches!(row, DiffParseRow::Diff(_))));
+        assert!(!rows
+            .iter()
+            .any(|row| matches!(row, DiffParseRow::Folded { .. })));
+    }
+
+    /// inline模式下，`Replace`块产出单个`Replace`行，左右行号都存在
+    #[test]
+    fn inline_replace_status_is_replace() {
+        let old = "hello world\n";
+        let new = "hello WORLD\n";
+        let diff = TextDiff::from_lines(old, new);
+        let rows = build_rows(&diff, true, false, 3);
+
+        assert_eq!(rows.len(), 1);
+        match &rows[0] {
+            DiffParseRow::Diff(r) => {
+                assert!(matches!(r.status, LineStatus::Replace));
+                assert_eq!(r.left_no, Some(1));
+                assert_eq!(r.right_no, Some(1));
+            }
+            _ => panic!("expected a single inline Replace row"),
+        }
+    }
+
+    /// 非inline模式下，`Replace`块拆成先`Delete`后`Insert`两行
+    #[test]
+    fn non_inline_replace_is_delete_then_insert() {
+        let old = "x\n";
+        let new = "y\n";
+        let diff = TextDiff::from_lines(old, new);
+        let rows = build_rows(&diff, false, false, 1);
+
+        assert_eq!(rows.len(), 2);
+        match &rows[0] {
+            DiffParseRow::Diff(r) => {
+                assert!(matches!(r.status, LineStatus::Delete));
+                assert_eq!(r.left_no, Some(1));
+                assert_eq!(r.right_no, None);
+            }
+            _ => panic!("row 0 should be the Delete row"),
+        }
+        match &rows[1] {
+            DiffParseRow::Diff(r) => {
+                assert!(matches!(r.status, LineStatus::Insert));
+                assert_eq!(r.left_no, None);
+                assert_eq!(r.right_no, Some(1));
+            }
+            _ => panic!("row 1 should be the Insert row"),
+        }
+    }
+}

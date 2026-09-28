@@ -46,3 +46,30 @@ impl Segment {
         Self { emphasis, seg_text }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 控制字符转义：`TAB`转空格，其余`0x00-0x1F`转caret，`0x7F`转`^?`，普通字符原样返回
+    #[test]
+    fn control_char_escaping() {
+        assert_eq!(terminal_control_convert_to_safety('\u{1b}'), "^["); // ESC
+        assert_eq!(terminal_control_convert_to_safety('\u{0}'), "^@"); // NUL
+        assert_eq!(terminal_control_convert_to_safety('\u{7}'), "^G"); // BEL
+        assert_eq!(terminal_control_convert_to_safety('\t'), " "); // TAB -> space
+        assert_eq!(terminal_control_convert_to_safety('\u{7f}'), "^?"); // DEL
+        assert_eq!(terminal_control_convert_to_safety('A'), "A"); // 普通ASCII
+        assert_eq!(terminal_control_convert_to_safety('中'), "中"); // 非ASCII原样
+    }
+
+    /// 一段ANSI注入payload经处理后不应残留裸ESC，且正文文本保留
+    #[test]
+    fn sanitizes_ansi_injection_payload() {
+        let out = get_sanitized_string("\u{1b}[31mRED\u{1b}[0m");
+        assert!(!out.contains('\u{1b}')); // 没有裸ESC残留
+        assert!(out.contains("^[")); // ESC被caret转义
+        assert!(out.contains("31mRED")); // 正文保留
+        assert!(out.contains("0m")); // 结尾reset文本保留
+    }
+}
