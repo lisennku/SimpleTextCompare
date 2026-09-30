@@ -3,7 +3,7 @@
 //! 1. 按照文本对照形式输出差异
 
 use crate::ansi_config::{CYAN, GREEN, RED, RESET};
-use crate::row::build_rows;
+use crate::row::{DiffParseRow, build_rows};
 use crate::{common, consts, output};
 use anyhow::{Context, Result, bail};
 use similar::{ChangeTag, TextDiff};
@@ -68,6 +68,24 @@ fn read_file_to_string_with_bytes_limits(file: &Path, file_limit_bytes: u64) -> 
     }
 }
 
+fn build_table_rows(
+    left_text: &str,
+    right_text: &str,
+    no_width: usize,
+    inline: bool,
+    enable_folded: bool,
+    folded_radius: usize,
+) -> (usize, Vec<DiffParseRow>) {
+    let diff = TextDiff::from_lines(left_text, right_text);
+    let rows = build_rows(&diff, inline, enable_folded, folded_radius);
+
+    // 计算合法行号宽度
+    let max_lines = left_text.lines().count().max(right_text.lines().count());
+    let valid_line_no_width = no_width.max(max_lines.to_string().len());
+
+    (valid_line_no_width, rows)
+}
+
 /// 按照给定的文件，以表格形式输出两个文本之间的差异
 /// - `left`  左文件
 /// - `right` 右文件
@@ -98,14 +116,16 @@ pub fn compare_files_table_style(
     let right_file_name = get_file_name_display_safety(right, "<right>", Some(code_width));
 
     let left_text = read_file_to_string_with_bytes_limits(left, file_limit_bytes)?;
-
     let right_text = read_file_to_string_with_bytes_limits(right, file_limit_bytes)?;
 
-    let diff = TextDiff::from_lines(&left_text, &right_text);
-
-    // 计算合法行号宽度
-    let max_lines = left_text.lines().count().max(right_text.lines().count());
-    let valid_line_no_width = no_width.max(max_lines.to_string().len());
+    let (valid_line_no_width, rows) = build_table_rows(
+        &left_text,
+        &right_text,
+        no_width,
+        inline,
+        enable_folded,
+        folded_radius,
+    );
 
     output::output_wrapped_header(
         &left_file_name,
@@ -119,7 +139,6 @@ pub fn compare_files_table_style(
     let total_width = output::table_total_width(code_width, valid_line_no_width);
     output::output_separator_row(total_width, writer)?;
 
-    let rows = build_rows(&diff, inline, enable_folded, folded_radius);
     output::render_rows(&rows, code_width, valid_line_no_width, writer, color)?;
 
     Ok(())
